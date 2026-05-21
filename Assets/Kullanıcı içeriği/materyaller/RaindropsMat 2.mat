@@ -138,7 +138,7 @@ Material:
     - _ReceiveShadows: 1
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
-    - _Smoothness_Control: 0
+    - _Smoothness_Control: 0.21
     - _SpecularHighlights: 1
     - _Splotch_Size_Max: 0.3
     - _Splotch_Size_Min: 0.1
