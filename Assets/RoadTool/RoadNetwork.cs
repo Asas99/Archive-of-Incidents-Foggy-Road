@@ -28,10 +28,35 @@ public class RoadNetwork : MonoBehaviour
         RoadGeneratedUv
     }
 
+    public enum RoadType
+    {
+        Custom,
+        DirtPath,
+        SingleLane,
+        TwoLane,
+        RuralDamaged,
+        Urban,
+        Highway,
+        Divided
+    }
+
     public enum PaintBlendMode
     {
         Alpha,
-        Additive
+        Additive,
+        Multiply
+    }
+
+    [System.Serializable]
+    public class PaintBrushType
+    {
+        public string name = "Damage";
+        public List<Texture2D> textures = new List<Texture2D>();
+        public PaintBlendMode blend = PaintBlendMode.Alpha;
+        public Color tint = Color.white;
+        [Min(0.1f)] public float defaultSize = 3f;
+        [Range(0f, 1f)] public float defaultFalloff = 0.6f;
+        [Range(0f, 1f)] public float defaultOpacity = 0.7f;
     }
 
     [System.Serializable]
@@ -49,6 +74,8 @@ public class RoadNetwork : MonoBehaviour
         public Material material;
         public Texture2D texture;
         public PaintBlendMode blendMode = PaintBlendMode.Alpha;
+        public Color tint = Color.white;
+        public int brushTypeIndex = -1;
     }
 
     [System.Serializable]
@@ -68,6 +95,10 @@ public class RoadNetwork : MonoBehaviour
         [Range(0f, 1f)] public float edgeJitter = 0.45f;
         [Range(0.001f, 0.15f)] public float yOffset = 0.028f;
         public PaintBlendMode blendMode = PaintBlendMode.Alpha;
+        [Range(0f, 1f)] public float flow = 1f;
+        [Range(0f, 1f)] public float randomOpacity = 0.3f;
+        [Range(0f, 1f)] public float randomTint = 0.25f;
+        [Range(2, 12)] public int gridResolution = 6;
     }
 
     [System.Serializable]
@@ -81,6 +112,8 @@ public class RoadNetwork : MonoBehaviour
         public List<Vector3> points = new List<Vector3>();
 
         [Header("Shape")]
+        public RoadType roadType = RoadType.Custom;
+        [Min(0f)] public float medianWidth = 0f;
         [Min(0.5f)] public float width = 5f;
         [Min(0f)] public float shoulderWidth = 2f;
         [Range(0.05f, 2f)] public float samplesPerMeter = 0.25f;
@@ -159,6 +192,10 @@ public class RoadNetwork : MonoBehaviour
     public bool autoRebuildMeshes = true;
     public List<RoadPath> roads = new List<RoadPath>();
 
+    [Header("Paint Damage Library")]
+    public List<PaintBrushType> brushTypes = new List<PaintBrushType>();
+    public int activeBrushTypeIndex;
+
     [Header("Terrain Deformation")]
     public bool deformTerrainHeights = true;
     public float terrainHeightOffset = -0.02f;
@@ -207,6 +244,33 @@ public class RoadNetwork : MonoBehaviour
 
         road.points.RemoveAt(pointIndex);
         RebuildAllMeshes();
+    }
+
+    // Removes ONLY this road and its own generated child objects. Other roads are untouched;
+    // RebuildAllMeshes then renames the survivors to their new indices.
+    public void RemoveRoad(int roadIndex)
+    {
+        if (roads == null || roadIndex < 0 || roadIndex >= roads.Count)
+            return;
+
+        RoadPath road = roads[roadIndex];
+        DestroyRoadObject(road.generatedObject);
+        DestroyRoadObject(road.overlayObject);
+        DestroyRoadObject(road.paintObject);
+        roads.RemoveAt(roadIndex);
+
+        EnsureDefaultRoad();
+        RebuildAllMeshes();
+    }
+
+    void DestroyRoadObject(GameObject go)
+    {
+        if (go == null)
+            return;
+        if (Application.isPlaying)
+            Destroy(go);
+        else
+            DestroyImmediate(go);
     }
 
     public Vector3 GetPointWorld(int roadIndex, int pointIndex)
@@ -334,12 +398,33 @@ public class RoadNetwork : MonoBehaviour
             if (filter == null || filter.sharedMesh == null)
                 continue;
 
+            string safeName = string.Join("_", road.name.Split(System.IO.Path.GetInvalidFileNameChars()));
+
             Mesh baked = Instantiate(filter.sharedMesh);
             baked.name = $"{road.name}_Paint_BakedMesh";
-            string safeName = string.Join("_", road.name.Split(System.IO.Path.GetInvalidFileNameChars()));
             string path = UnityEditor.AssetDatabase.GenerateUniqueAssetPath($"{folder}/{safeName}_Paint.asset");
             UnityEditor.AssetDatabase.CreateAsset(baked, path);
             filter.sharedMesh = baked;
+
+            // Persist the runtime (DontSave) decal materials as real assets, so the baked
+            // scene still renders if this generator component is later removed.
+            MeshRenderer renderer = road.paintObject.GetComponent<MeshRenderer>();
+            if (renderer != null)
+            {
+                Material[] shared = renderer.sharedMaterials;
+                Material[] savedMaterials = new Material[shared.Length];
+                for (int i = 0; i < shared.Length; i++)
+                {
+                    if (shared[i] == null)
+                        continue;
+
+                    Material savedMaterial = new Material(shared[i]) { hideFlags = HideFlags.None };
+                    string matPath = UnityEditor.AssetDatabase.GenerateUniqueAssetPath($"{folder}/{safeName}_PaintMat_{i}.mat");
+                    UnityEditor.AssetDatabase.CreateAsset(savedMaterial, matPath);
+                    savedMaterials[i] = savedMaterial;
+                }
+                renderer.sharedMaterials = savedMaterials;
+            }
         }
 
         UnityEditor.AssetDatabase.SaveAssets();
@@ -460,6 +545,9 @@ public class RoadNetwork : MonoBehaviour
 
     Mesh BuildRoadMesh(RoadPath road, List<RoadSample> samples)
     {
+        if (road.medianWidth > 0.01f && road.medianWidth < road.width - 0.1f)
+            return BuildDividedRoadMesh(road, samples);
+
         int materialCount = Mathf.Max(1, GetRoadMaterialCount(road));
         int vertexCount = samples.Count * 2;
         Vector3[] vertices = new Vector3[vertexCount];
@@ -512,6 +600,75 @@ public class RoadNetwork : MonoBehaviour
         mesh.RecalculateBounds();
         mesh.RecalculateTangents();
         return mesh;
+    }
+
+    // Divided / dual-carriageway road: two strips with a central median gap (medianWidth).
+    // Only used in ProceduralStrip mode; the Divided preset switches geometry to that.
+    Mesh BuildDividedRoadMesh(RoadPath road, List<RoadSample> samples)
+    {
+        int materialCount = Mathf.Max(1, GetRoadMaterialCount(road));
+        int vertexCount = samples.Count * 4;
+        Vector3[] vertices = new Vector3[vertexCount];
+        Vector3[] normals = new Vector3[vertexCount];
+        Vector2[] uvs = new Vector2[vertexCount];
+        List<int>[] trianglesByMaterial = CreateTriangleBuckets(materialCount);
+
+        float halfWidth = road.width * 0.5f;
+        float halfMedian = Mathf.Clamp(road.medianWidth * 0.5f, 0.05f, halfWidth - 0.2f);
+        float edgeRef = Mathf.Max(0.01f, halfWidth);
+
+        for (int i = 0; i < samples.Count; i++)
+        {
+            Vector3 tangent = GetSampleTangent(samples, i);
+            Vector3 right = new Vector3(tangent.z, 0f, -tangent.x);
+            if (right.sqrMagnitude < 0.0001f)
+                right = Vector3.right;
+            right.Normalize();
+
+            int b = i * 4;
+            float d = samples[i].distance;
+            vertices[b + 0] = BuildDeformedVertex(road, samples[i].center, right, -halfWidth, d, -1f, 0f);
+            vertices[b + 1] = BuildDeformedVertex(road, samples[i].center, right, -halfMedian, d, -halfMedian / edgeRef, 0f);
+            vertices[b + 2] = BuildDeformedVertex(road, samples[i].center, right, halfMedian, d, halfMedian / edgeRef, 0f);
+            vertices[b + 3] = BuildDeformedVertex(road, samples[i].center, right, halfWidth, d, 1f, 0f);
+            normals[b + 0] = normals[b + 1] = normals[b + 2] = normals[b + 3] = Vector3.up;
+
+            float v = d / Mathf.Max(0.001f, road.uvMetersPerTile);
+            uvs[b + 0] = TransformRoadUv(road, new Vector2(0f, v));
+            uvs[b + 1] = TransformRoadUv(road, new Vector2(1f, v));
+            uvs[b + 2] = TransformRoadUv(road, new Vector2(0f, v));
+            uvs[b + 3] = TransformRoadUv(road, new Vector2(1f, v));
+        }
+
+        for (int i = 0; i < samples.Count - 1; i++)
+        {
+            int b = i * 4;
+            int nb = (i + 1) * 4;
+            List<int> bucket = trianglesByMaterial[GetMaterialSlotForDistance(road, samples[i].distance, materialCount)];
+            AddRoadQuad(bucket, b + 0, b + 1, nb + 0, nb + 1); // left carriageway
+            AddRoadQuad(bucket, b + 2, b + 3, nb + 2, nb + 3); // right carriageway
+        }
+
+        Mesh mesh = new Mesh { name = $"{road.name}_DividedRoad" };
+        if (vertexCount > 65000)
+            mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        mesh.SetVertices(vertices);
+        mesh.SetNormals(normals);
+        mesh.SetUVs(0, uvs);
+        ApplySubmeshTriangles(mesh, trianglesByMaterial);
+        mesh.RecalculateBounds();
+        mesh.RecalculateTangents();
+        return mesh;
+    }
+
+    static void AddRoadQuad(List<int> bucket, int thisLeft, int thisRight, int nextLeft, int nextRight)
+    {
+        bucket.Add(thisLeft);
+        bucket.Add(nextLeft);
+        bucket.Add(thisRight);
+        bucket.Add(thisRight);
+        bucket.Add(nextLeft);
+        bucket.Add(nextRight);
     }
 
     Mesh BuildSourceMeshRoadMesh(RoadPath road, List<RoadSample> samples)
@@ -812,7 +969,6 @@ public class RoadNetwork : MonoBehaviour
             DestroyMesh(filter.sharedMesh);
 
         MeshRenderer renderer = paintObject.GetComponent<MeshRenderer>();
-        ClearGeneratedPaintMaterials(renderer.sharedMaterials);
 
         List<Material> materials = new List<Material>();
         Mesh mesh = BuildPaintOverlayMesh(road, samples, materials);
@@ -824,57 +980,33 @@ public class RoadNetwork : MonoBehaviour
     {
         List<Vector3> vertices = new List<Vector3>();
         List<Vector3> normals = new List<Vector3>();
-        List<Vector2> uvs = new List<Vector2>();
-        List<int>[] trianglesByStamp = CreateTriangleBuckets(road.paintStamps.Count);
+        List<Vector2> uvs0 = new List<Vector2>();
+        List<Vector2> uvs1 = new List<Vector2>();
+        List<Color> colors = new List<Color>();
+        List<List<int>> buckets = new List<List<int>>();
+        Dictionary<(Texture2D, PaintBlendMode), int> keyToSlot = new Dictionary<(Texture2D, PaintBlendMode), int>();
 
-        for (int stampIndex = 0; stampIndex < road.paintStamps.Count; stampIndex++)
+        int grid = Mathf.Clamp(road.brush != null ? road.brush.gridResolution : 6, 2, 12);
+        float yBase = Mathf.Max(0.001f, road.brush != null ? road.brush.yOffset : 0.028f);
+
+        for (int s = 0; s < road.paintStamps.Count; s++)
         {
-            PaintStamp stamp = road.paintStamps[stampIndex];
-            Material paintMaterial = CreatePaintMaterial(stamp, road.brush, stampIndex);
-            if (paintMaterial == null)
-                continue;
+            PaintStamp stamp = road.paintStamps[s];
+            Texture2D texture = ResolveStampTexture(stamp, road.brush);
+            if (texture == null)
+                texture = WhiteDecalTexture();
 
-            int materialSlot = materials.Count;
-            materials.Add(paintMaterial);
-
-            int baseVertex = vertices.Count;
-            int sides = 20;
-            RoadFrame centerFrame = EvaluateFrame(samples, stamp.distance);
-            Vector3 center = centerFrame.center + centerFrame.right * stamp.sideOffset + Vector3.up * Mathf.Max(0.001f, road.brush.yOffset);
-            vertices.Add(center);
-            normals.Add(Vector3.up);
-            uvs.Add(new Vector2(0.5f, 0.5f));
-
-            float radius = Mathf.Max(0.05f, stamp.radius * Mathf.Max(0.05f, stamp.scale));
-            float rotationRad = stamp.rotation * Mathf.Deg2Rad;
-            float cos = Mathf.Cos(rotationRad);
-            float sin = Mathf.Sin(rotationRad);
-
-            for (int i = 0; i <= sides; i++)
+            var key = (texture, stamp.blendMode);
+            if (!keyToSlot.TryGetValue(key, out int slot))
             {
-                float angle = i / (float)sides * Mathf.PI * 2f;
-                float ux = Mathf.Cos(angle);
-                float uy = Mathf.Sin(angle);
-                float rotatedX = ux * cos - uy * sin;
-                float rotatedY = ux * sin + uy * cos;
-                float jitter = 1f + (Hash01(stamp.seed, i, 9157) - 0.5f) * 2f * stamp.edgeJitter;
-                jitter = Mathf.Clamp(jitter, 0.35f, 1.45f);
-
-                float forwardOffset = rotatedY * radius * jitter;
-                float sideOffset = stamp.sideOffset + rotatedX * radius * jitter;
-                RoadFrame frame = EvaluateFrame(samples, stamp.distance + forwardOffset);
-                vertices.Add(frame.center + frame.right * sideOffset + Vector3.up * Mathf.Max(0.001f, road.brush.yOffset + stampIndex * 0.0004f));
-                normals.Add(Vector3.up);
-                uvs.Add(new Vector2(0.5f + ux * 0.5f, 0.5f + uy * 0.5f));
+                slot = buckets.Count;
+                keyToSlot[key] = slot;
+                buckets.Add(new List<int>());
+                materials.Add(GetDecalMaterial(texture, stamp.blendMode));
             }
 
-            List<int> bucket = trianglesByStamp[materialSlot];
-            for (int i = 1; i <= sides; i++)
-            {
-                bucket.Add(baseVertex);
-                bucket.Add(baseVertex + i);
-                bucket.Add(baseVertex + i + 1);
-            }
+            AppendStampGrid(stamp, samples, grid, yBase + slot * 0.0004f,
+                vertices, normals, uvs0, uvs1, colors, buckets[slot]);
         }
 
         Mesh mesh = new Mesh { name = $"{road.name}_PaintOverlay" };
@@ -882,69 +1014,205 @@ public class RoadNetwork : MonoBehaviour
             mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
         mesh.SetVertices(vertices);
         mesh.SetNormals(normals);
-        mesh.SetUVs(0, uvs);
-        List<int>[] usedTriangles = new List<int>[materials.Count];
-        for (int i = 0; i < usedTriangles.Length; i++)
-            usedTriangles[i] = trianglesByStamp[i];
-        ApplySubmeshTriangles(mesh, usedTriangles);
+        mesh.SetUVs(0, uvs0);
+        mesh.SetUVs(1, uvs1);
+        mesh.SetColors(colors);
+        mesh.subMeshCount = buckets.Count;
+        for (int i = 0; i < buckets.Count; i++)
+            mesh.SetTriangles(buckets[i], i);
         mesh.RecalculateBounds();
-        mesh.RecalculateTangents();
         return mesh;
     }
 
-    static Material CreatePaintMaterial(PaintStamp stamp, RoadBrushSettings brush, int stampIndex)
+    // One soft, rounded grid quad per stamp, conforming to the road frame. Rotation is applied
+    // to the LOCAL quad (UVs stay 0..1) so the texture visibly rotates. Per-stamp falloff rides
+    // in UV1.x and tint/opacity in vertex color, so many stamps share one batched material.
+    void AppendStampGrid(PaintStamp stamp, List<RoadSample> samples, int grid, float yLift,
+        List<Vector3> vertices, List<Vector3> normals, List<Vector2> uvs0, List<Vector2> uvs1,
+        List<Color> colors, List<int> triangles)
     {
-        Material source = stamp.material != null ? stamp.material : brush.brushMaterial;
-        Texture2D texture = stamp.texture != null ? stamp.texture : brush.brushTexture;
-        Material material;
-
-        if (source != null)
+        Color tint = stamp.tint;
+        if (stamp.material != null)
         {
-            material = new Material(source);
+            if (stamp.material.HasProperty("_BaseColor"))
+                tint *= stamp.material.GetColor("_BaseColor");
+            else if (stamp.material.HasProperty("_Color"))
+                tint *= stamp.material.GetColor("_Color");
         }
-        else if (texture != null)
+        Color vertexColor = new Color(tint.r, tint.g, tint.b, Mathf.Clamp01(stamp.opacity * tint.a));
+        Vector2 falloffUv = new Vector2(Mathf.Clamp01(stamp.falloff), 0f);
+
+        float half = Mathf.Max(0.05f, stamp.radius * Mathf.Max(0.05f, stamp.scale));
+        float rotationRad = stamp.rotation * Mathf.Deg2Rad;
+        float cos = Mathf.Cos(rotationRad);
+        float sin = Mathf.Sin(rotationRad);
+        int baseVertex = vertices.Count;
+
+        for (int gy = 0; gy < grid; gy++)
         {
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-            if (shader == null)
-                shader = Shader.Find("Standard");
-            material = new Material(shader);
+            for (int gx = 0; gx < grid; gx++)
+            {
+                float u = gx / (grid - 1f);
+                float v = gy / (grid - 1f);
+                float localX = (u - 0.5f) * 2f * half;
+                float localY = (v - 0.5f) * 2f * half;
+
+                if (stamp.edgeJitter > 0f && (gx == 0 || gy == 0 || gx == grid - 1 || gy == grid - 1))
+                {
+                    float jitter = 1f + (Hash01(stamp.seed, gy * grid + gx, 9157) - 0.5f) * 2f * stamp.edgeJitter * 0.5f;
+                    localX *= jitter;
+                    localY *= jitter;
+                }
+
+                float rotatedX = localX * cos - localY * sin;
+                float rotatedY = localX * sin + localY * cos;
+                RoadFrame frame = EvaluateFrame(samples, stamp.distance + rotatedY);
+                vertices.Add(frame.center + frame.right * (stamp.sideOffset + rotatedX) + Vector3.up * yLift);
+                normals.Add(Vector3.up);
+                uvs0.Add(new Vector2(u, v));
+                uvs1.Add(falloffUv);
+                colors.Add(vertexColor);
+            }
+        }
+
+        for (int gy = 0; gy < grid - 1; gy++)
+        {
+            for (int gx = 0; gx < grid - 1; gx++)
+            {
+                int i0 = baseVertex + gy * grid + gx;
+                int i1 = i0 + 1;
+                int i2 = i0 + grid;
+                int i3 = i2 + 1;
+                triangles.Add(i0);
+                triangles.Add(i2);
+                triangles.Add(i1);
+                triangles.Add(i1);
+                triangles.Add(i2);
+                triangles.Add(i3);
+            }
+        }
+    }
+
+    static Shader s_decalShader;
+    static readonly Dictionary<(Texture2D, PaintBlendMode), Material> s_decalMaterials =
+        new Dictionary<(Texture2D, PaintBlendMode), Material>();
+    static Texture2D s_whiteDecal;
+
+    static Texture2D ResolveStampTexture(PaintStamp stamp, RoadBrushSettings brush)
+    {
+        if (stamp.texture != null)
+            return stamp.texture;
+
+        if (stamp.material != null)
+        {
+            Texture t = null;
+            if (stamp.material.HasProperty("_BaseMap"))
+                t = stamp.material.GetTexture("_BaseMap");
+            if (t == null && stamp.material.HasProperty("_MainTex"))
+                t = stamp.material.GetTexture("_MainTex");
+            if (t is Texture2D t2)
+                return t2;
+        }
+
+        if (brush != null && brush.brushTexture != null)
+            return brush.brushTexture;
+
+        return null;
+    }
+
+    static Texture2D WhiteDecalTexture()
+    {
+        if (s_whiteDecal == null)
+        {
+            s_whiteDecal = new Texture2D(4, 4, TextureFormat.RGBA32, false) { hideFlags = HideFlags.DontSave };
+            Color[] px = new Color[16];
+            for (int i = 0; i < px.Length; i++)
+                px[i] = Color.white;
+            s_whiteDecal.SetPixels(px);
+            s_whiteDecal.Apply();
+        }
+        return s_whiteDecal;
+    }
+
+    // One cached material per (texture, blend) pair, so any number of stamps that share a
+    // damage texture + blend mode batch into a single draw. Materials are runtime-only
+    // (DontSave); BakePaintMeshes persists copies as assets.
+    static Material GetDecalMaterial(Texture2D texture, PaintBlendMode blend)
+    {
+        var key = (texture, blend);
+        if (s_decalMaterials.TryGetValue(key, out Material cached) && cached != null)
+            return cached;
+
+        if (s_decalShader == null)
+            s_decalShader = Shader.Find("RoadTool/RoadPaintDecal");
+
+        Material material;
+        if (s_decalShader != null)
+        {
+            material = new Material(s_decalShader);
             material.SetTexture("_BaseMap", texture);
-            material.SetTexture("_MainTex", texture);
+            material.SetColor("_BaseColor", Color.white);
+            ApplyDecalBlend(material, blend);
         }
         else
         {
-            return null;
+            // Decal shader not imported yet – render with a transparent Lit/Standard clone so
+            // nothing is invisible; replaced automatically once the shader compiles.
+            Shader fallback = Shader.Find("Universal Render Pipeline/Lit");
+            if (fallback == null)
+                fallback = Shader.Find("Standard");
+            material = new Material(fallback);
+            if (material.HasProperty("_BaseMap"))
+                material.SetTexture("_BaseMap", texture);
+            if (material.HasProperty("_MainTex"))
+                material.SetTexture("_MainTex", texture);
+            ConfigureLegacyTransparent(material, blend);
         }
 
-        material.name = $"RoadPaint_{stampIndex}_{(source != null ? source.name : texture.name)}";
+        material.name = $"RoadPaintDecal_{(texture != null ? texture.name : "white")}_{blend}";
         material.hideFlags = HideFlags.DontSave;
-        ConfigurePaintMaterial(material, Mathf.Clamp01(stamp.opacity), stamp.blendMode);
+        material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 10;
+        s_decalMaterials[key] = material;
         return material;
     }
 
-    static void ConfigurePaintMaterial(Material material, float alpha, PaintBlendMode blendMode)
+    static void ApplyDecalBlend(Material material, PaintBlendMode blend)
     {
-        if (material.HasProperty("_BaseColor"))
+        material.DisableKeyword("_BLEND_ADDITIVE");
+        material.DisableKeyword("_BLEND_MULTIPLY");
+        switch (blend)
         {
-            Color color = material.GetColor("_BaseColor");
-            color.a = alpha;
-            material.SetColor("_BaseColor", color);
+            case PaintBlendMode.Additive:
+                material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+                material.EnableKeyword("_BLEND_ADDITIVE");
+                break;
+            case PaintBlendMode.Multiply:
+                material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.DstColor);
+                material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.Zero);
+                material.EnableKeyword("_BLEND_MULTIPLY");
+                break;
+            default:
+                material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                break;
         }
-        if (material.HasProperty("_Color"))
-        {
-            Color color = material.GetColor("_Color");
-            color.a = alpha;
-            material.SetColor("_Color", color);
-        }
+    }
 
+    static void ConfigureLegacyTransparent(Material material, PaintBlendMode blendMode)
+    {
         if (material.HasProperty("_Surface"))
             material.SetFloat("_Surface", 1f);
         if (material.HasProperty("_SrcBlend"))
-            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetFloat("_SrcBlend", blendMode == PaintBlendMode.Multiply
+                ? (float)UnityEngine.Rendering.BlendMode.DstColor
+                : (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
         if (material.HasProperty("_DstBlend"))
             material.SetFloat("_DstBlend", blendMode == PaintBlendMode.Additive
                 ? (float)UnityEngine.Rendering.BlendMode.One
-                : (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                : blendMode == PaintBlendMode.Multiply
+                    ? (float)UnityEngine.Rendering.BlendMode.Zero
+                    : (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
         if (material.HasProperty("_ZWrite"))
             material.SetFloat("_ZWrite", 0f);
         if (material.HasProperty("_AlphaClip"))
@@ -952,24 +1220,20 @@ public class RoadNetwork : MonoBehaviour
 
         material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
         material.DisableKeyword("_ALPHATEST_ON");
-        material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 10;
     }
 
-    static void ClearGeneratedPaintMaterials(Material[] materials)
+    public static void ClearDecalMaterialCache()
     {
-        if (materials == null)
-            return;
-
-        foreach (Material material in materials)
+        foreach (var kv in s_decalMaterials)
         {
-            if (material == null || !material.name.StartsWith("RoadPaint_"))
+            if (kv.Value == null)
                 continue;
-
             if (Application.isPlaying)
-                Destroy(material);
+                Destroy(kv.Value);
             else
-                DestroyImmediate(material);
+                DestroyImmediate(kv.Value);
         }
+        s_decalMaterials.Clear();
     }
 
     struct SourceBounds
@@ -1185,6 +1449,38 @@ public class RoadNetwork : MonoBehaviour
         return true;
     }
 
+    // Rebuilds ONLY the active road's paint overlay (not every road's road/overlay/paint mesh).
+    // Used while dragging the brush so painting stays smooth; a full RebuildAllMeshes runs only
+    // on the explicit "Rebuild All" button.
+    public void RebuildPaintOnly(int roadIndex)
+    {
+        EnsureDefaultRoad();
+        if (roads.Count == 0)
+            return;
+
+        roadIndex = Mathf.Clamp(roadIndex, 0, roads.Count - 1);
+        RoadPath road = roads[roadIndex];
+        List<RoadSample> samples = BuildSamples(road);
+        if (samples == null || samples.Count < 2)
+        {
+            if (road.paintObject != null)
+                road.paintObject.SetActive(false);
+            return;
+        }
+
+        RebuildPaintOverlayMesh(road, roadIndex, samples);
+    }
+
+    public void AddPaintStampFast(int roadIndex, PaintStamp stamp)
+    {
+        RoadPath road = ActiveRoad(roadIndex);
+        if (road.paintStamps == null)
+            road.paintStamps = new List<PaintStamp>();
+
+        road.paintStamps.Add(stamp);
+        RebuildPaintOnly(roadIndex);
+    }
+
     public void AddPaintStamp(int roadIndex, PaintStamp stamp)
     {
         RoadPath road = ActiveRoad(roadIndex);
@@ -1192,7 +1488,7 @@ public class RoadNetwork : MonoBehaviour
             road.paintStamps = new List<PaintStamp>();
 
         road.paintStamps.Add(stamp);
-        RebuildAllMeshes();
+        RebuildPaintOnly(roadIndex);
     }
 
     public int RemovePaintStampsNear(int roadIndex, float distance, float sideOffset, float radius)
@@ -1216,7 +1512,7 @@ public class RoadNetwork : MonoBehaviour
         }
 
         if (removed > 0)
-            RebuildAllMeshes();
+            RebuildPaintOnly(roadIndex);
         return removed;
     }
 
@@ -1228,7 +1524,7 @@ public class RoadNetwork : MonoBehaviour
         else
             road.paintStamps.Clear();
 
-        RebuildAllMeshes();
+        RebuildPaintOnly(roadIndex);
     }
 
     static Vector3 TransformSourceNormal(Vector3 sourceNormal, RoadFrame frame, SourceBounds bounds)

@@ -10,7 +10,11 @@ public class RoadNetworkEditor : Editor
     static int activeRoadIndex;
     static int selectedPointIndex = -1;
     static bool showAdvanced;
-    static float lastPaintDistance = -9999f;
+    static Vector2 lastPaintUV = new Vector2(-9999f, -9999f);
+    static int paintStrokeCounter;
+    static bool showRandomize = true;
+    static bool showBrushTypeManager;
+    static bool showLegacyPaint;
 
     RoadNetwork Network => (RoadNetwork)target;
 
@@ -83,13 +87,15 @@ public class RoadNetworkEditor : Editor
             activeRoadIndex = EditorGUILayout.Popup("Active Road", activeRoadIndex, names);
         }
 
+        DrawRoadManagementRow();
         DrawSourceObjectPanel();
         DrawActiveRoadPanel();
         DrawPaintBrushPanel();
         DrawTerrainPanel();
+        DrawExportPanel();
 
         EditorGUILayout.HelpBox(
-            "Draw Mode yol noktasi ekler. Paint Mode yol ustune brush/stamp boyar. Paint Mode'da sol tik/surukle boya, Shift sil, Ctrl daha hafif boya.",
+            "Draw Mode yol noktasi ekler. Paint Mode'da hasar tipi grid'inden tip sec, sol tik/surukle boya. [ ve ] fircayi kucult/buyut, - ve = falloff, Shift sil, Ctrl yumusak.",
             MessageType.Info);
 
         showAdvanced = EditorGUILayout.Foldout(showAdvanced, "Advanced Raw Inspector");
@@ -98,6 +104,117 @@ public class RoadNetworkEditor : Editor
             EditorGUILayout.Space(4);
             DrawDefaultInspector();
         }
+    }
+
+    void DrawRoadManagementRow()
+    {
+        if (Network.roads.Count == 0)
+            return;
+
+        RoadNetwork.RoadPath road = Network.ActiveRoad(activeRoadIndex);
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            EditorGUI.BeginChangeCheck();
+            string newName = EditorGUILayout.TextField("Yol Adi", road.name);
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(Network, "Rename Road");
+                road.name = newName;
+                EditorUtility.SetDirty(Network);
+            }
+
+            GUI.backgroundColor = new Color(1f, 0.5f, 0.45f);
+            if (GUILayout.Button("Delete Road", GUILayout.Width(96)))
+            {
+                if (EditorUtility.DisplayDialog("Yolu sil",
+                    $"'{road.name}' yolu ve uretilen mesh'leri silinsin mi?\n(Sadece bu yol silinir; diger yollar kalir.)",
+                    "Sil", "Vazgec"))
+                {
+                    Undo.RecordObject(Network, "Delete Road");
+                    Network.RemoveRoad(activeRoadIndex);
+                    activeRoadIndex = Mathf.Clamp(activeRoadIndex, 0, Mathf.Max(0, Network.roads.Count - 1));
+                    selectedPointIndex = -1;
+                    EditorUtility.SetDirty(Network);
+                    SceneView.RepaintAll();
+                    GUIUtility.ExitGUI();
+                }
+            }
+            GUI.backgroundColor = Color.white;
+        }
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            RoadNetwork.RoadType newType = (RoadNetwork.RoadType)EditorGUILayout.EnumPopup("Yol Tipi", road.roadType);
+            if (newType != road.roadType)
+                ApplyRoadType(road, newType);
+
+            if (road.roadType == RoadNetwork.RoadType.Divided)
+            {
+                EditorGUI.BeginChangeCheck();
+                float median = EditorGUILayout.FloatField("Orta Bant", road.medianWidth);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    Undo.RecordObject(Network, "Change Median Width");
+                    road.medianWidth = Mathf.Clamp(median, 0f, Mathf.Max(0f, road.width - 0.4f));
+                    Network.RebuildAllMeshes();
+                    EditorUtility.SetDirty(Network);
+                    SceneView.RepaintAll();
+                }
+            }
+        }
+    }
+
+    // Road-type presets give many quick varieties (Patika .. Otoyol .. Bolunmus).
+    // They tune width/shoulder/deformation/uv; only Divided changes geometry (median split).
+    void ApplyRoadType(RoadNetwork.RoadPath road, RoadNetwork.RoadType type)
+    {
+        Undo.RecordObject(Network, "Change Road Type");
+        road.roadType = type;
+        switch (type)
+        {
+            case RoadNetwork.RoadType.DirtPath:
+                road.width = 2.5f; road.shoulderWidth = 0.6f; road.medianWidth = 0f;
+                road.samplesPerMeter = 0.4f; road.uvMetersPerTile = 3f;
+                road.enableDeformation = true; road.surfaceHeightNoise = 0.06f; road.edgeWidthNoise = 0.5f; road.flatSectionChance = 0.1f;
+                break;
+            case RoadNetwork.RoadType.SingleLane:
+                road.width = 3.5f; road.shoulderWidth = 1f; road.medianWidth = 0f;
+                road.uvMetersPerTile = 4f;
+                road.enableDeformation = true; road.surfaceHeightNoise = 0.03f; road.edgeWidthNoise = 0.18f; road.flatSectionChance = 0.35f;
+                break;
+            case RoadNetwork.RoadType.TwoLane:
+                road.width = 7f; road.shoulderWidth = 1.5f; road.medianWidth = 0f;
+                road.uvMetersPerTile = 5f;
+                road.enableDeformation = true; road.surfaceHeightNoise = 0.03f; road.edgeWidthNoise = 0.15f; road.flatSectionChance = 0.4f;
+                break;
+            case RoadNetwork.RoadType.RuralDamaged:
+                road.width = 5f; road.shoulderWidth = 1f; road.medianWidth = 0f;
+                road.uvMetersPerTile = 4f;
+                road.enableDeformation = true; road.surfaceHeightNoise = 0.08f; road.edgeWidthNoise = 0.45f; road.flatSectionChance = 0.1f;
+                break;
+            case RoadNetwork.RoadType.Urban:
+                road.width = 9f; road.shoulderWidth = 0.5f; road.medianWidth = 0f;
+                road.uvMetersPerTile = 6f;
+                road.enableDeformation = false; road.surfaceHeightNoise = 0.01f; road.edgeWidthNoise = 0.05f; road.flatSectionChance = 0.8f;
+                break;
+            case RoadNetwork.RoadType.Highway:
+                road.width = 12f; road.shoulderWidth = 3f; road.medianWidth = 0f;
+                road.uvMetersPerTile = 6f;
+                road.enableDeformation = false; road.surfaceHeightNoise = 0.015f; road.edgeWidthNoise = 0.08f; road.flatSectionChance = 0.7f;
+                break;
+            case RoadNetwork.RoadType.Divided:
+                road.geometryMode = RoadNetwork.GeometryMode.ProceduralStrip;
+                road.width = 16f; road.shoulderWidth = 2.5f; road.medianWidth = 3f;
+                road.uvMetersPerTile = 6f;
+                road.enableDeformation = false; road.surfaceHeightNoise = 0.015f; road.edgeWidthNoise = 0.08f; road.flatSectionChance = 0.7f;
+                break;
+            default:
+                break;
+        }
+        Network.RebuildAllMeshes();
+        EditorUtility.SetDirty(Network);
+        SceneView.RepaintAll();
     }
 
     void DrawSourceObjectPanel()
@@ -326,43 +443,73 @@ public class RoadNetworkEditor : Editor
             road.brush = new RoadNetwork.RoadBrushSettings();
 
         EditorGUILayout.Space(8);
-        EditorGUILayout.LabelField("Paint Brush", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("Paint - Hasar Fircasi", EditorStyles.boldLabel);
+
+        if (!HasAnyDamageTexture())
+        {
+            EditorGUILayout.HelpBox("Henuz hasar dokusu yok - bu yuzden boyama bos/soluk cikar. Once asagidaki butona bas:", MessageType.Warning);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Generate Starter Damage Textures", GUILayout.Height(32)))
+                    GenerateStarterDamageTextures();
+                if (GUILayout.Button("Load Assets/yol Damage", GUILayout.Height(32)))
+                    LoadYolDamageTypes();
+            }
+            EditorGUILayout.Space(4);
+        }
+
+        DrawDamageTypeGrid(road);
 
         EditorGUI.BeginChangeCheck();
-        Material brushMaterial = (Material)EditorGUILayout.ObjectField("Brush Material", road.brush.brushMaterial, typeof(Material), false);
-        Texture2D brushTexture = (Texture2D)EditorGUILayout.ObjectField("Brush Texture", road.brush.brushTexture, typeof(Texture2D), false);
-        bool randomPalette = EditorGUILayout.Toggle("Palette Random", road.brush.randomPalette);
-        float size = EditorGUILayout.FloatField("Brush Size", road.brush.size);
-        float opacity = EditorGUILayout.Slider("Opacity", road.brush.opacity, 0.01f, 1f);
-        float spacing = EditorGUILayout.FloatField("Spacing", road.brush.spacing);
-        float falloff = EditorGUILayout.Slider("Falloff", road.brush.falloff, 0f, 1f);
-        float randomRotation = EditorGUILayout.Slider("Random Rotation", road.brush.randomRotation, 0f, 1f);
-        float randomScale = EditorGUILayout.Slider("Random Scale", road.brush.randomScale, 0f, 1f);
-        float randomOffset = EditorGUILayout.Slider("Random Offset", road.brush.randomOffset, 0f, 1f);
-        float edgeJitter = EditorGUILayout.Slider("Edge Jitter", road.brush.edgeJitter, 0f, 1f);
-        float yOffset = EditorGUILayout.Slider("Paint Y Offset", road.brush.yOffset, 0.001f, 0.15f);
-        RoadNetwork.PaintBlendMode blendMode = (RoadNetwork.PaintBlendMode)EditorGUILayout.EnumPopup("Blend Mode", road.brush.blendMode);
+        float size = EditorGUILayout.Slider(new GUIContent("Brush Size", "Firca yaricapi (metre). Sahnede [ ve ] ile de degisir."), road.brush.size, 0.1f, 30f);
+        float opacity = EditorGUILayout.Slider(new GUIContent("Opacity", "Boya yogunlugu / saydamlik."), road.brush.opacity, 0.01f, 1f);
+        float falloff = EditorGUILayout.Slider(new GUIContent("Falloff", "Kenar yumusakligi. 0 = cok yumusak, 1 = sert kenar."), road.brush.falloff, 0f, 1f);
+        float flow = EditorGUILayout.Slider(new GUIContent("Flow", "Suruklerken birakma yogunlugu. 1 = her adimda, dusuk = seyrek."), road.brush.flow, 0.05f, 1f);
+        float spacing = EditorGUILayout.Slider(new GUIContent("Spacing", "Iki damga arasi minimum mesafe (metre)."), road.brush.spacing, 0.1f, 10f);
+        int grid = EditorGUILayout.IntSlider(new GUIContent("Grid Resolution", "Damga mesh cozunurlugu. Yuksek = daha puruzsuz ama agir."), road.brush.gridResolution, 2, 12);
+        float yOffset = EditorGUILayout.Slider(new GUIContent("Paint Y Offset", "Yol yuzeyinden yukseklik (z-fighting onler)."), road.brush.yOffset, 0.001f, 0.15f);
+        RoadNetwork.PaintBlendMode blendMode = (RoadNetwork.PaintBlendMode)EditorGUILayout.EnumPopup(new GUIContent("Blend Mode", "Alpha = normal, Additive = aydinlatir, Multiply = koyulastirir (kir/yag)."), road.brush.blendMode);
 
         if (EditorGUI.EndChangeCheck())
         {
             Undo.RecordObject(Network, "Change Paint Brush");
-            road.brush.brushMaterial = brushMaterial;
-            road.brush.brushTexture = brushTexture;
-            road.brush.randomPalette = randomPalette;
             road.brush.size = Mathf.Max(0.1f, size);
             road.brush.opacity = Mathf.Clamp01(opacity);
-            road.brush.spacing = Mathf.Max(0.1f, spacing);
             road.brush.falloff = Mathf.Clamp01(falloff);
-            road.brush.randomRotation = Mathf.Clamp01(randomRotation);
-            road.brush.randomScale = Mathf.Clamp01(randomScale);
-            road.brush.randomOffset = Mathf.Clamp01(randomOffset);
-            road.brush.edgeJitter = Mathf.Clamp01(edgeJitter);
+            road.brush.flow = Mathf.Clamp01(flow);
+            road.brush.spacing = Mathf.Max(0.1f, spacing);
+            road.brush.gridResolution = Mathf.Clamp(grid, 2, 12);
             road.brush.yOffset = Mathf.Clamp(yOffset, 0.001f, 0.15f);
             road.brush.blendMode = blendMode;
             EditorUtility.SetDirty(Network);
         }
 
-        DrawPaintPalettePanel(road);
+        showRandomize = EditorGUILayout.Foldout(showRandomize, "Randomize (cesitlilik)", true);
+        if (showRandomize)
+        {
+            EditorGUI.indentLevel++;
+            EditorGUI.BeginChangeCheck();
+            float randomRotation = EditorGUILayout.Slider(new GUIContent("Random Rotation", "Her damgayi rastgele dondurur (asimetrik dokuda gorunur)."), road.brush.randomRotation, 0f, 1f);
+            float randomScale = EditorGUILayout.Slider(new GUIContent("Random Scale", "Boyut cesitliligi."), road.brush.randomScale, 0f, 1f);
+            float randomOffset = EditorGUILayout.Slider(new GUIContent("Random Offset", "Konum kaymasi."), road.brush.randomOffset, 0f, 1f);
+            float randomOpacity = EditorGUILayout.Slider(new GUIContent("Random Opacity", "Saydamlik cesitliligi."), road.brush.randomOpacity, 0f, 1f);
+            float randomTint = EditorGUILayout.Slider(new GUIContent("Random Tint", "Acik/koyu renk cesitliligi."), road.brush.randomTint, 0f, 1f);
+            float edgeJitter = EditorGUILayout.Slider(new GUIContent("Edge Jitter", "Kenar duzensizligi."), road.brush.edgeJitter, 0f, 1f);
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(Network, "Change Paint Random");
+                road.brush.randomRotation = Mathf.Clamp01(randomRotation);
+                road.brush.randomScale = Mathf.Clamp01(randomScale);
+                road.brush.randomOffset = Mathf.Clamp01(randomOffset);
+                road.brush.randomOpacity = Mathf.Clamp01(randomOpacity);
+                road.brush.randomTint = Mathf.Clamp01(randomTint);
+                road.brush.edgeJitter = Mathf.Clamp01(edgeJitter);
+                EditorUtility.SetDirty(Network);
+            }
+            EditorGUI.indentLevel--;
+        }
+
+        DrawBrushTypeManager();
 
         using (new EditorGUILayout.HorizontalScope())
         {
@@ -374,18 +521,212 @@ public class RoadNetworkEditor : Editor
                 SceneView.RepaintAll();
             }
 
-            if (GUILayout.Button("Erase Paint"))
-            {
-                Undo.RecordObject(Network, "Erase Road Paint");
-                road.paintStamps?.Clear();
-                Network.RebuildAllMeshes();
-                EditorUtility.SetDirty(Network);
-                SceneView.RepaintAll();
-            }
-
             if (GUILayout.Button("Bake Paint Mesh"))
                 Network.BakePaintMeshes();
         }
+
+        showLegacyPaint = EditorGUILayout.Foldout(showLegacyPaint, "Advanced (legacy palette)", true);
+        if (showLegacyPaint)
+        {
+            EditorGUI.indentLevel++;
+            EditorGUI.BeginChangeCheck();
+            Material brushMaterial = (Material)EditorGUILayout.ObjectField("Brush Material", road.brush.brushMaterial, typeof(Material), false);
+            Texture2D brushTexture = (Texture2D)EditorGUILayout.ObjectField("Brush Texture", road.brush.brushTexture, typeof(Texture2D), false);
+            bool randomPalette = EditorGUILayout.Toggle("Palette Random", road.brush.randomPalette);
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(Network, "Change Paint Brush (legacy)");
+                road.brush.brushMaterial = brushMaterial;
+                road.brush.brushTexture = brushTexture;
+                road.brush.randomPalette = randomPalette;
+                EditorUtility.SetDirty(Network);
+            }
+            DrawPaintPalettePanel(road);
+            EditorGUI.indentLevel--;
+        }
+    }
+
+    void EnsureBrushTypes()
+    {
+        if (Network.brushTypes == null)
+            Network.brushTypes = new List<RoadNetwork.PaintBrushType>();
+    }
+
+    bool HasAnyDamageTexture()
+    {
+        if (Network.brushTypes == null)
+            return false;
+        foreach (RoadNetwork.PaintBrushType type in Network.brushTypes)
+        {
+            if (type == null || type.textures == null)
+                continue;
+            foreach (Texture2D tex in type.textures)
+                if (tex != null)
+                    return true;
+        }
+        return false;
+    }
+
+    void ApplyBrushTypeDefaults(RoadNetwork.RoadPath road, RoadNetwork.PaintBrushType type)
+    {
+        road.brush.size = Mathf.Max(0.1f, type.defaultSize);
+        road.brush.falloff = Mathf.Clamp01(type.defaultFalloff);
+        road.brush.opacity = Mathf.Clamp01(type.defaultOpacity);
+        road.brush.blendMode = type.blend;
+    }
+
+    // Unity-terrain-brush-style selectable grid of damage types (thumbnails).
+    void DrawDamageTypeGrid(RoadNetwork.RoadPath road)
+    {
+        EnsureBrushTypes();
+        if (Network.brushTypes.Count == 0)
+        {
+            EditorGUILayout.HelpBox("Hasar tipi yok. Asagidaki 'Hasar Tipleri' bolumunden 'Load Assets/yol Damage' veya 'Generate Starter Damage Textures' ile ekle.", MessageType.Info);
+            return;
+        }
+
+        EditorGUILayout.LabelField("Hasar Tipi", EditorStyles.miniBoldLabel);
+        const int columns = 4;
+        int idx = 0;
+        while (idx < Network.brushTypes.Count)
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                for (int c = 0; c < columns && idx < Network.brushTypes.Count; c++, idx++)
+                {
+                    RoadNetwork.PaintBrushType type = Network.brushTypes[idx];
+                    Texture2D thumb = (type.textures != null && type.textures.Count > 0) ? type.textures[0] : null;
+                    Texture preview = null;
+                    if (thumb != null)
+                    {
+                        preview = AssetPreview.GetAssetPreview(thumb);
+                        if (preview == null)
+                        {
+                            preview = AssetPreview.GetMiniThumbnail(thumb);
+                            if (AssetPreview.IsLoadingAssetPreview(thumb.GetInstanceID()))
+                                Repaint();
+                        }
+                    }
+
+                    bool selected = idx == Network.activeBrushTypeIndex;
+                    Color prev = GUI.backgroundColor;
+                    if (selected)
+                        GUI.backgroundColor = new Color(0.55f, 0.72f, 1f);
+                    GUIContent content = new GUIContent(preview, type.name);
+                    if (GUILayout.Button(content, GUILayout.Width(64), GUILayout.Height(64)))
+                    {
+                        Undo.RecordObject(Network, "Select Damage Type");
+                        Network.activeBrushTypeIndex = idx;
+                        ApplyBrushTypeDefaults(road, type);
+                        EditorUtility.SetDirty(Network);
+                    }
+                    GUI.backgroundColor = prev;
+                }
+            }
+        }
+
+        int active = Mathf.Clamp(Network.activeBrushTypeIndex, 0, Network.brushTypes.Count - 1);
+        EditorGUILayout.LabelField("Secili", Network.brushTypes[active].name, EditorStyles.miniLabel);
+    }
+
+    void DrawBrushTypeManager()
+    {
+        EditorGUILayout.Space(4);
+        showBrushTypeManager = EditorGUILayout.Foldout(showBrushTypeManager, "Hasar Tipleri (yonet)", true);
+        if (!showBrushTypeManager)
+            return;
+
+        EnsureBrushTypes();
+        EditorGUI.indentLevel++;
+        int removeIndex = -1;
+        for (int i = 0; i < Network.brushTypes.Count; i++)
+        {
+            RoadNetwork.PaintBrushType type = Network.brushTypes[i];
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUI.BeginChangeCheck();
+                    string typeName = EditorGUILayout.TextField(type.name);
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        Undo.RecordObject(Network, "Rename Damage Type");
+                        type.name = typeName;
+                        EditorUtility.SetDirty(Network);
+                    }
+                    if (GUILayout.Button("X", GUILayout.Width(24)))
+                        removeIndex = i;
+                }
+
+                EditorGUI.BeginChangeCheck();
+                RoadNetwork.PaintBlendMode blend = (RoadNetwork.PaintBlendMode)EditorGUILayout.EnumPopup("Blend", type.blend);
+                Color tint = EditorGUILayout.ColorField("Tint", type.tint);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    Undo.RecordObject(Network, "Edit Damage Type");
+                    type.blend = blend;
+                    type.tint = tint;
+                    EditorUtility.SetDirty(Network);
+                }
+
+                if (type.textures == null)
+                    type.textures = new List<Texture2D>();
+                int texRemove = -1;
+                for (int t = 0; t < type.textures.Count; t++)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        EditorGUI.BeginChangeCheck();
+                        Texture2D tex = (Texture2D)EditorGUILayout.ObjectField($"Tex {t + 1}", type.textures[t], typeof(Texture2D), false);
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            Undo.RecordObject(Network, "Set Damage Texture");
+                            type.textures[t] = tex;
+                            EditorUtility.SetDirty(Network);
+                        }
+                        if (GUILayout.Button("X", GUILayout.Width(24)))
+                            texRemove = t;
+                    }
+                }
+                if (texRemove >= 0)
+                {
+                    Undo.RecordObject(Network, "Remove Damage Texture");
+                    type.textures.RemoveAt(texRemove);
+                    EditorUtility.SetDirty(Network);
+                }
+                if (GUILayout.Button("+ Texture ekle"))
+                {
+                    Undo.RecordObject(Network, "Add Damage Texture");
+                    type.textures.Add(null);
+                    EditorUtility.SetDirty(Network);
+                }
+            }
+        }
+
+        if (removeIndex >= 0)
+        {
+            Undo.RecordObject(Network, "Remove Damage Type");
+            Network.brushTypes.RemoveAt(removeIndex);
+            Network.activeBrushTypeIndex = Mathf.Clamp(Network.activeBrushTypeIndex, 0, Mathf.Max(0, Network.brushTypes.Count - 1));
+            EditorUtility.SetDirty(Network);
+        }
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("+ Tip ekle"))
+            {
+                Undo.RecordObject(Network, "Add Damage Type");
+                Network.brushTypes.Add(new RoadNetwork.PaintBrushType { name = $"Damage {Network.brushTypes.Count + 1}" });
+                EditorUtility.SetDirty(Network);
+            }
+            if (GUILayout.Button("Load Assets/yol Damage"))
+                LoadYolDamageTypes();
+        }
+
+        if (GUILayout.Button("Generate Starter Damage Textures"))
+            GenerateStarterDamageTextures();
+
+        EditorGUI.indentLevel--;
     }
 
     void DrawPaintPalettePanel(RoadNetwork.RoadPath road)
@@ -557,6 +898,189 @@ public class RoadNetworkEditor : Editor
         }
     }
 
+    void DrawExportPanel()
+    {
+        EditorGUILayout.Space(8);
+        EditorGUILayout.LabelField("Export (Substance Painter)", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("Yol mesh'ini disari aktar, Substance Painter'da boya. OBJ paket gerektirmez ve SP direkt acar (UV + normal tasir). FBX icin Unity 'FBX Exporter' paketi gerekir (ilk seferinde sorar, otomatik kurar).", MessageType.None);
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("Export FBX", GUILayout.Height(30)))
+                ExportRoadFbx();
+            if (GUILayout.Button("Export OBJ", GUILayout.Height(30)))
+                ExportRoadObj();
+        }
+    }
+
+    List<(Mesh mesh, Transform tf)> GatherRoadMeshes()
+    {
+        List<(Mesh, Transform)> list = new List<(Mesh, Transform)>();
+        if (Network.roads == null)
+            return list;
+        foreach (RoadNetwork.RoadPath road in Network.roads)
+        {
+            if (road == null || road.generatedObject == null)
+                continue;
+            MeshFilter mf = road.generatedObject.GetComponent<MeshFilter>();
+            if (mf != null && mf.sharedMesh != null)
+                list.Add((mf.sharedMesh, road.generatedObject.transform));
+        }
+        return list;
+    }
+
+    static string SanitizeName(string raw)
+    {
+        if (string.IsNullOrEmpty(raw))
+            return "Road";
+        return string.Join("_", raw.Split(System.IO.Path.GetInvalidFileNameChars()));
+    }
+
+    void RefreshIfInProject(string absolutePath)
+    {
+        string dataPath = Application.dataPath.Replace('\\', '/');
+        string p = absolutePath.Replace('\\', '/');
+        if (p.StartsWith(dataPath))
+            AssetDatabase.Refresh();
+    }
+
+    void ExportRoadObj()
+    {
+        List<(Mesh mesh, Transform tf)> meshes = GatherRoadMeshes();
+        if (meshes.Count == 0)
+        {
+            Debug.LogWarning("[RoadTool] Disa aktarilacak yol mesh'i yok. Once 'Rebuild All'a bas.");
+            return;
+        }
+
+        string path = EditorUtility.SaveFilePanel("Export Road OBJ", Application.dataPath, SanitizeName(Network.gameObject.name) + "_Road", "obj");
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        System.Globalization.CultureInfo ci = System.Globalization.CultureInfo.InvariantCulture;
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.AppendLine("# RoadTool OBJ export - Substance Painter icin");
+        sb.AppendLine("o " + SanitizeName(Network.gameObject.name) + "_Road");
+
+        int vOff = 0, vtOff = 0, vnOff = 0;
+        foreach ((Mesh mesh, Transform tf) in meshes)
+        {
+            Vector3[] verts = mesh.vertices;
+            Vector3[] normals = mesh.normals;
+            Vector2[] uvs = mesh.uv;
+            bool hasN = normals != null && normals.Length == verts.Length;
+            bool hasUv = uvs != null && uvs.Length == verts.Length;
+
+            for (int i = 0; i < verts.Length; i++)
+            {
+                Vector3 wp = Network.transform.InverseTransformPoint(tf.TransformPoint(verts[i]));
+                sb.AppendLine(string.Format(ci, "v {0} {1} {2}", -wp.x, wp.y, wp.z));
+            }
+            if (hasUv)
+                for (int i = 0; i < uvs.Length; i++)
+                    sb.AppendLine(string.Format(ci, "vt {0} {1}", uvs[i].x, uvs[i].y));
+            if (hasN)
+                for (int i = 0; i < normals.Length; i++)
+                {
+                    Vector3 wn = Network.transform.InverseTransformDirection(tf.TransformDirection(normals[i]));
+                    sb.AppendLine(string.Format(ci, "vn {0} {1} {2}", -wn.x, wn.y, wn.z));
+                }
+
+            for (int sm = 0; sm < mesh.subMeshCount; sm++)
+            {
+                int[] tris = mesh.GetTriangles(sm);
+                for (int t = 0; t < tris.Length; t += 3)
+                    sb.AppendLine(ObjFace(tris[t], tris[t + 1], tris[t + 2], vOff, vtOff, vnOff, hasUv, hasN));
+            }
+
+            vOff += verts.Length;
+            if (hasUv) vtOff += uvs.Length;
+            if (hasN) vnOff += normals.Length;
+        }
+
+        System.IO.File.WriteAllText(path, sb.ToString());
+        RefreshIfInProject(path);
+        Debug.Log("[RoadTool] OBJ kaydedildi: " + path);
+        EditorUtility.RevealInFinder(path);
+    }
+
+    static string ObjFace(int a, int b, int c, int vOff, int vtOff, int vnOff, bool hasUv, bool hasN)
+    {
+        return "f " + ObjCorner(a, vOff, vtOff, vnOff, hasUv, hasN)
+             + " " + ObjCorner(b, vOff, vtOff, vnOff, hasUv, hasN)
+             + " " + ObjCorner(c, vOff, vtOff, vnOff, hasUv, hasN);
+    }
+
+    static string ObjCorner(int idx, int vOff, int vtOff, int vnOff, bool hasUv, bool hasN)
+    {
+        int v = vOff + idx + 1;
+        if (hasUv && hasN) return $"{v}/{vtOff + idx + 1}/{vnOff + idx + 1}";
+        if (hasUv) return $"{v}/{vtOff + idx + 1}";
+        if (hasN) return $"{v}//{vnOff + idx + 1}";
+        return v.ToString();
+    }
+
+    void ExportRoadFbx()
+    {
+        List<(Mesh mesh, Transform tf)> meshes = GatherRoadMeshes();
+        if (meshes.Count == 0)
+        {
+            Debug.LogWarning("[RoadTool] Disa aktarilacak yol mesh'i yok. Once 'Rebuild All'a bas.");
+            return;
+        }
+
+        // Official Unity FBX Exporter, called via reflection so this script compiles even when
+        // the package is not installed.
+        System.Type exporterType = System.Type.GetType("UnityEditor.Formats.Fbx.Exporter.ModelExporter, Unity.Formats.Fbx.Editor");
+        if (exporterType == null)
+        {
+            bool install = EditorUtility.DisplayDialog(
+                "FBX Exporter gerekli",
+                "FBX disa aktarmak icin Unity 'FBX Exporter' paketi gerekli.\n\nSimdi kurulsun mu? (Internet gerekir; birkac saniye surer. Bitince tekrar 'Export FBX'e bas.)\n\nAlternatif: 'Export OBJ' paket istemez ve Substance Painter OBJ'yi acar.",
+                "FBX Exporter'i kur", "Iptal");
+            if (install)
+            {
+                UnityEditor.PackageManager.Client.Add("com.unity.formats.fbx");
+                Debug.Log("[RoadTool] FBX Exporter paketi kuruluyor... Bitince tekrar 'Export FBX'e bas.");
+            }
+            return;
+        }
+
+        System.Reflection.MethodInfo method = exporterType.GetMethod("ExportObject", new[] { typeof(string), typeof(UnityEngine.Object) });
+        if (method == null)
+        {
+            Debug.LogError("[RoadTool] FBX Exporter API bulunamadi (ExportObject). Lutfen 'Export OBJ' kullan.");
+            return;
+        }
+
+        string path = EditorUtility.SaveFilePanel("Export Road FBX", Application.dataPath, SanitizeName(Network.gameObject.name) + "_Road", "fbx");
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        GameObject temp = new GameObject("RoadExport");
+        try
+        {
+            foreach ((Mesh mesh, Transform tf) in meshes)
+            {
+                GameObject part = new GameObject(tf.gameObject.name);
+                part.transform.SetParent(temp.transform, false);
+                part.transform.SetPositionAndRotation(tf.position, tf.rotation);
+                part.transform.localScale = tf.lossyScale;
+                part.AddComponent<MeshFilter>().sharedMesh = mesh;
+                MeshRenderer srcRenderer = tf.GetComponent<MeshRenderer>();
+                part.AddComponent<MeshRenderer>().sharedMaterials = srcRenderer != null ? srcRenderer.sharedMaterials : new Material[0];
+            }
+
+            method.Invoke(null, new object[] { path, temp });
+            RefreshIfInProject(path);
+            Debug.Log("[RoadTool] FBX kaydedildi: " + path);
+            EditorUtility.RevealInFinder(path);
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(temp);
+        }
+    }
+
     void OnSceneGUI()
     {
         RoadNetwork network = Network;
@@ -617,6 +1141,8 @@ public class RoadNetworkEditor : Editor
         if (e.type == EventType.Layout)
             HandleUtility.AddDefaultControl(controlId);
 
+        HandlePaintHotkeys(network, road, e);
+
         if (!TryGetPlacement(out Vector3 position))
             return;
 
@@ -627,11 +1153,13 @@ public class RoadNetworkEditor : Editor
         bool soft = e.control;
         DrawPaintCursor(network, road, frame, sideOffset, erase, soft);
 
-        if ((e.type != EventType.MouseDown && e.type != EventType.MouseDrag) || e.button != 0 || e.alt)
+        if (e.type == EventType.MouseUp && e.button == 0)
+        {
+            lastPaintUV = new Vector2(-9999f, -9999f);
             return;
+        }
 
-        float spacing = road.brush.spacing * (soft ? 1.5f : 1f);
-        if (!erase && Mathf.Abs(distance - lastPaintDistance) < spacing && e.type == EventType.MouseDrag)
+        if ((e.type != EventType.MouseDown && e.type != EventType.MouseDrag) || e.button != 0 || e.alt)
             return;
 
         Undo.RecordObject(network, erase ? "Erase Road Paint" : "Paint Road");
@@ -639,12 +1167,31 @@ public class RoadNetworkEditor : Editor
         if (erase)
         {
             network.RemovePaintStampsNear(activeRoadIndex, distance, sideOffset, road.brush.size);
+            lastPaintUV = new Vector2(distance, sideOffset);
         }
         else
         {
+            // Spacing is measured in 2D (along + across the road), so holding still or moving
+            // sideways spaces stamps correctly - not just forward distance like before.
+            float spacing = Mathf.Max(0.05f, road.brush.spacing) * (soft ? 1.5f : 1f);
+            Vector2 here = new Vector2(distance, sideOffset);
+            if (e.type == EventType.MouseDrag && Vector2.Distance(here, lastPaintUV) < spacing)
+            {
+                e.Use();
+                return;
+            }
+
+            // Flow: probabilistically skip deposits so a low flow paints a sparser stream.
+            paintStrokeCounter++;
+            if (road.brush.flow < 1f && Hash01(paintStrokeCounter, Mathf.RoundToInt(distance * 7f), 17) > road.brush.flow)
+            {
+                e.Use();
+                return;
+            }
+
             RoadNetwork.PaintStamp stamp = CreatePaintStamp(road, distance, sideOffset, soft);
-            network.AddPaintStamp(activeRoadIndex, stamp);
-            lastPaintDistance = distance;
+            network.AddPaintStampFast(activeRoadIndex, stamp);
+            lastPaintUV = here;
         }
 
         EditorUtility.SetDirty(network);
@@ -652,51 +1199,135 @@ public class RoadNetworkEditor : Editor
         e.Use();
     }
 
+    void HandlePaintHotkeys(RoadNetwork network, RoadNetwork.RoadPath road, Event e)
+    {
+        if (e.type != EventType.KeyDown)
+            return;
+
+        bool handled = true;
+        switch (e.keyCode)
+        {
+            case KeyCode.LeftBracket:
+                road.brush.size = Mathf.Max(0.1f, road.brush.size * 0.85f);
+                break;
+            case KeyCode.RightBracket:
+                road.brush.size = Mathf.Min(60f, road.brush.size * 1.15f);
+                break;
+            case KeyCode.Minus:
+            case KeyCode.KeypadMinus:
+                road.brush.falloff = Mathf.Clamp01(road.brush.falloff - 0.1f);
+                break;
+            case KeyCode.Equals:
+            case KeyCode.KeypadPlus:
+                road.brush.falloff = Mathf.Clamp01(road.brush.falloff + 0.1f);
+                break;
+            default:
+                handled = false;
+                break;
+        }
+
+        if (handled)
+        {
+            Undo.RecordObject(network, "Adjust Brush");
+            EditorUtility.SetDirty(network);
+            Repaint();
+            SceneView.RepaintAll();
+            e.Use();
+        }
+    }
+
     void DrawPaintCursor(RoadNetwork network, RoadNetwork.RoadPath road, RoadNetwork.RoadFrame frame, float sideOffset, bool erase, bool soft)
     {
         Vector3 center = network.transform.TransformPoint(frame.center + frame.right * sideOffset + Vector3.up * road.brush.yOffset);
         float radius = road.brush.size * (soft ? 0.8f : 1f);
-        Handles.color = erase ? new Color(1f, 0.2f, 0.15f, 0.9f) : new Color(0.25f, 0.7f, 1f, 0.9f);
+        Color main = erase ? new Color(1f, 0.25f, 0.18f, 0.95f) : new Color(0.3f, 0.75f, 1f, 0.95f);
+
+        Handles.color = main;
         Handles.DrawWireDisc(center, Vector3.up, radius);
-        Handles.color = erase ? new Color(1f, 0.2f, 0.15f, 0.18f) : new Color(0.25f, 0.7f, 1f, 0.14f);
+
+        // inner ring visualises the solid (pre-falloff) core
+        Handles.color = new Color(main.r, main.g, main.b, 0.55f);
+        Handles.DrawWireDisc(center, Vector3.up, radius * Mathf.Clamp01(road.brush.falloff));
+
+        Handles.color = new Color(main.r, main.g, main.b, erase ? 0.16f : 0.12f);
         Handles.DrawSolidDisc(center, Vector3.up, radius);
+
+        // forward tick for orientation reference
+        Vector3 fwd = network.transform.TransformDirection(frame.tangent);
+        Handles.color = main;
+        Handles.DrawLine(center, center + fwd * radius * 0.6f);
+
+        string label = erase
+            ? "Sil"
+            : (Network.brushTypes != null && Network.brushTypes.Count > 0
+                ? Network.brushTypes[Mathf.Clamp(Network.activeBrushTypeIndex, 0, Network.brushTypes.Count - 1)].name
+                : "Boya");
+        Handles.Label(center + Vector3.up * (radius * 0.2f + 0.3f), label);
     }
 
     RoadNetwork.PaintStamp CreatePaintStamp(RoadNetwork.RoadPath road, float distance, float sideOffset, bool soft)
     {
-        int seed = Mathf.Abs(Mathf.RoundToInt(distance * 37f + sideOffset * 101f + road.paintStamps.Count * 9973f));
-        Material material = road.brush.brushMaterial;
-        if (road.brush.randomPalette && road.brush.materialPalette != null && road.brush.materialPalette.Count > 0)
-        {
-            List<Material> palette = new List<Material>();
-            foreach (Material paletteMaterial in road.brush.materialPalette)
-            {
-                if (paletteMaterial != null)
-                    palette.Add(paletteMaterial);
-            }
+        int seed = Mathf.Abs(Mathf.RoundToInt(distance * 37f + sideOffset * 101f) + paintStrokeCounter * 9973 + road.paintStamps.Count * 131);
 
-            if (palette.Count > 0)
-                material = palette[Mathf.Abs(seed) % palette.Count];
+        Texture2D texture = null;
+        Material material = null;
+        Color typeTint = Color.white;
+        RoadNetwork.PaintBlendMode blend = road.brush.blendMode;
+        int brushTypeIndex = -1;
+
+        // Active damage type drives the texture (random variant), blend and tint.
+        if (Network.brushTypes != null && Network.brushTypes.Count > 0)
+        {
+            brushTypeIndex = Mathf.Clamp(Network.activeBrushTypeIndex, 0, Network.brushTypes.Count - 1);
+            RoadNetwork.PaintBrushType type = Network.brushTypes[brushTypeIndex];
+            typeTint = type.tint;
+            blend = type.blend;
+            List<Texture2D> valid = type.textures != null ? type.textures.FindAll(t => t != null) : null;
+            if (valid != null && valid.Count > 0)
+                texture = valid[Mathf.Abs(seed) % valid.Count];
+        }
+
+        // Legacy fallback when no damage types are defined yet.
+        if (texture == null)
+        {
+            material = road.brush.brushMaterial;
+            if (road.brush.randomPalette && road.brush.materialPalette != null && road.brush.materialPalette.Count > 0)
+            {
+                List<Material> palette = road.brush.materialPalette.FindAll(m => m != null);
+                if (palette.Count > 0)
+                    material = palette[Mathf.Abs(seed) % palette.Count];
+            }
+            if (material == null)
+                texture = road.brush.brushTexture;
         }
 
         float randomScale = Mathf.Lerp(1f - road.brush.randomScale, 1f + road.brush.randomScale, Hash01(seed, 17, 3));
         float randomSide = Mathf.Lerp(-road.brush.randomOffset, road.brush.randomOffset, Hash01(seed, 29, 5)) * road.brush.size;
         float randomForward = Mathf.Lerp(-road.brush.randomOffset, road.brush.randomOffset, Hash01(seed, 41, 7)) * road.brush.size;
+        float opacityJitter = 1f - road.brush.randomOpacity * Hash01(seed, 67, 13);
+        float tintJitter = Mathf.Lerp(1f - road.brush.randomTint, 1f + road.brush.randomTint * 0.4f, Hash01(seed, 71, 19));
+        Color tint = new Color(
+            Mathf.Clamp01(typeTint.r * tintJitter),
+            Mathf.Clamp01(typeTint.g * tintJitter),
+            Mathf.Clamp01(typeTint.b * tintJitter),
+            typeTint.a);
 
         return new RoadNetwork.PaintStamp
         {
             distance = distance + randomForward,
             sideOffset = sideOffset + randomSide,
             radius = road.brush.size,
-            opacity = road.brush.opacity * (soft ? 0.45f : 1f),
+            opacity = Mathf.Clamp01(road.brush.opacity * (soft ? 0.45f : 1f) * opacityJitter),
             rotation = Mathf.Lerp(0f, 360f, Hash01(seed, 53, 11)) * road.brush.randomRotation,
-            scale = randomScale,
+            scale = Mathf.Max(0.05f, randomScale),
             falloff = road.brush.falloff,
             edgeJitter = road.brush.edgeJitter,
             seed = seed,
             material = material,
-            texture = material == null ? road.brush.brushTexture : null,
-            blendMode = road.brush.blendMode
+            texture = texture,
+            blendMode = blend,
+            tint = tint,
+            brushTypeIndex = brushTypeIndex
         };
     }
 
@@ -940,6 +1571,222 @@ public class RoadNetworkEditor : Editor
 
         EditorUtility.SetDirty(Network);
         SceneView.RepaintAll();
+    }
+
+    // Scans Assets/yol (+ Assets/yol/Damage) for textures and sorts them into damage types
+    // by filename. The asphalt PBR set (basecolor/normal/rough/metal/height) is skipped.
+    void LoadYolDamageTypes()
+    {
+        string[] folders = AssetDatabase.IsValidFolder("Assets/yol/Damage")
+            ? new[] { "Assets/yol", "Assets/yol/Damage" }
+            : new[] { "Assets/yol" };
+        string[] guids = AssetDatabase.FindAssets("t:Texture2D", folders);
+        if (guids.Length == 0)
+        {
+            Debug.LogWarning("[RoadTool] Assets/yol (veya Assets/yol/Damage) altinda texture bulunamadi.");
+            return;
+        }
+
+        Undo.RecordObject(Network, "Load Yol Damage Types");
+        EnsureBrushTypes();
+        int added = 0;
+        foreach (string guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (texture == null)
+                continue;
+
+            string lower = System.IO.Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
+            if (lower.Contains("basecolor") || lower.Contains("normal") || lower.Contains("rough")
+                || lower.Contains("metal") || lower.Contains("height") || lower.Contains("albedo"))
+                continue; // road surface PBR maps, not damage decals
+
+            ClassifyDamageTexture(lower, out string typeName, out RoadNetwork.PaintBlendMode blend);
+            if (AddTextureToType(typeName, blend, texture))
+                added++;
+        }
+
+        EditorUtility.SetDirty(Network);
+        SceneView.RepaintAll();
+        Debug.Log($"[RoadTool] {added} hasar dokusu yuklendi. Isimsiz/GUID dokulari elle dogru tipe surukleyebilirsin.");
+    }
+
+    static void ClassifyDamageTexture(string lower, out string typeName, out RoadNetwork.PaintBlendMode blend)
+    {
+        if (lower.Contains("crack")) { typeName = "Catlak"; blend = RoadNetwork.PaintBlendMode.Alpha; }
+        else if (lower.Contains("pothole") || lower.Contains("hole")) { typeName = "Cukur"; blend = RoadNetwork.PaintBlendMode.Multiply; }
+        else if (lower.Contains("patch")) { typeName = "Yama"; blend = RoadNetwork.PaintBlendMode.Alpha; }
+        else if (lower.Contains("oil") || lower.Contains("wet") || lower.Contains("stain")) { typeName = "Yag/Leke"; blend = RoadNetwork.PaintBlendMode.Multiply; }
+        else if (lower.Contains("wear") || lower.Contains("tire") || lower.Contains("tyre") || lower.Contains("skid")) { typeName = "Asinma"; blend = RoadNetwork.PaintBlendMode.Multiply; }
+        else if (lower.Contains("gravel") || lower.Contains("debris") || lower.Contains("dirt")) { typeName = "Cakil/Kir"; blend = RoadNetwork.PaintBlendMode.Alpha; }
+        else { typeName = "Diger"; blend = RoadNetwork.PaintBlendMode.Alpha; }
+    }
+
+    bool AddTextureToType(string typeName, RoadNetwork.PaintBlendMode blend, Texture2D texture)
+    {
+        EnsureBrushTypes();
+        RoadNetwork.PaintBrushType type = Network.brushTypes.Find(t => t.name == typeName);
+        if (type == null)
+        {
+            type = new RoadNetwork.PaintBrushType { name = typeName, blend = blend };
+            Network.brushTypes.Add(type);
+        }
+        if (type.textures == null)
+            type.textures = new List<Texture2D>();
+        if (type.textures.Contains(texture))
+            return false;
+
+        type.textures.Add(texture);
+        return true;
+    }
+
+    // Writes a small set of placeholder damage PNGs to Assets/yol/Damage so the tool is usable
+    // immediately. Replace them with real authored textures for the best look.
+    void GenerateStarterDamageTextures()
+    {
+        const string folder = "Assets/yol/Damage";
+        if (!AssetDatabase.IsValidFolder("Assets/yol"))
+            AssetDatabase.CreateFolder("Assets", "yol");
+        if (!AssetDatabase.IsValidFolder(folder))
+            AssetDatabase.CreateFolder("Assets/yol", "Damage");
+
+        Undo.RecordObject(Network, "Generate Starter Damage Textures");
+        EnsureBrushTypes();
+
+        WriteDamagePng(folder, "crack_starter", GenerateCrackTexture(256), "Catlak", RoadNetwork.PaintBlendMode.Alpha);
+        WriteDamagePng(folder, "pothole_starter", GeneratePotholeTexture(256), "Cukur", RoadNetwork.PaintBlendMode.Multiply);
+        WriteDamagePng(folder, "oil_starter", GenerateBlotchTexture(256), "Yag/Leke", RoadNetwork.PaintBlendMode.Multiply);
+        WriteDamagePng(folder, "tire_starter", GenerateTireTexture(256), "Asinma", RoadNetwork.PaintBlendMode.Multiply);
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        EditorUtility.SetDirty(Network);
+        SceneView.RepaintAll();
+        Debug.Log("[RoadTool] Baslangic hasar dokulari Assets/yol/Damage altina uretildi. Gercek PNG'lerle degistirebilirsin.");
+    }
+
+    void WriteDamagePng(string folder, string fileName, Texture2D texture, string typeName, RoadNetwork.PaintBlendMode blend)
+    {
+        byte[] png = texture.EncodeToPNG();
+        UnityEngine.Object.DestroyImmediate(texture);
+        string path = $"{folder}/{fileName}.png";
+        System.IO.File.WriteAllBytes(path, png);
+        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+
+        if (AssetImporter.GetAtPath(path) is TextureImporter importer)
+        {
+            importer.textureType = TextureImporterType.Default;
+            importer.alphaIsTransparency = true;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.mipmapEnabled = true;
+            importer.SaveAndReimport();
+        }
+
+        Texture2D imported = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        if (imported != null)
+            AddTextureToType(typeName, blend, imported);
+    }
+
+    static Texture2D GenerateCrackTexture(int size)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        Color[] px = new Color[size * size];
+        for (int i = 0; i < px.Length; i++)
+            px[i] = new Color(0.08f, 0.08f, 0.09f, 0f);
+
+        for (int line = 0; line < 3; line++)
+        {
+            float seed = line * 13.7f + 2.5f;
+            float basePos = (line + 1) / 4f;
+            bool vertical = (line % 2) == 0;
+            for (int t = 0; t < size; t++)
+            {
+                float n = Mathf.PerlinNoise(t * 0.02f + seed, seed * 1.3f) - 0.5f;
+                int pos = Mathf.RoundToInt(basePos * size + n * size * 0.18f);
+                int thickness = 1 + Mathf.RoundToInt(Mathf.PerlinNoise(t * 0.05f, seed) * 1.5f);
+                for (int w = -thickness; w <= thickness; w++)
+                {
+                    int x = vertical ? pos + w : t;
+                    int y = vertical ? t : pos + w;
+                    if (x < 0 || y < 0 || x >= size || y >= size)
+                        continue;
+                    float a = Mathf.Clamp01(1f - Mathf.Abs(w) / (thickness + 1f));
+                    int idx = y * size + x;
+                    if (a > px[idx].a)
+                        px[idx] = new Color(0.07f, 0.07f, 0.08f, a);
+                }
+            }
+        }
+
+        tex.SetPixels(px);
+        tex.Apply();
+        return tex;
+    }
+
+    static Texture2D GeneratePotholeTexture(int size)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        Color[] px = new Color[size * size];
+        float c = size * 0.5f;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x - c) / c;
+                float dy = (y - c) / c;
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                float edge = 0.65f + (Mathf.PerlinNoise(x * 0.05f, y * 0.05f) - 0.5f) * 0.25f;
+                float a = Mathf.Clamp01(1f - Mathf.SmoothStep(edge * 0.4f, edge, d));
+                float shade = Mathf.Lerp(0.12f, 0.4f, Mathf.PerlinNoise(x * 0.08f, y * 0.08f));
+                px[y * size + x] = new Color(shade, shade, shade, a);
+            }
+        }
+        tex.SetPixels(px);
+        tex.Apply();
+        return tex;
+    }
+
+    static Texture2D GenerateBlotchTexture(int size)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        Color[] px = new Color[size * size];
+        float c = size * 0.5f;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x - c) / c;
+                float dy = (y - c) / c;
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                float n = Mathf.PerlinNoise(x * 0.03f + 5.1f, y * 0.03f + 5.1f);
+                float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((1f - d) * 1.2f) * Mathf.Lerp(0.5f, 1f, n));
+                px[y * size + x] = new Color(0.05f, 0.05f, 0.06f, a);
+            }
+        }
+        tex.SetPixels(px);
+        tex.Apply();
+        return tex;
+    }
+
+    static Texture2D GenerateTireTexture(int size)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        Color[] px = new Color[size * size];
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float u = x / (float)size;
+                float band = Mathf.Max(1f - Mathf.Abs(u - 0.36f) / 0.10f, 1f - Mathf.Abs(u - 0.64f) / 0.10f);
+                band = Mathf.Clamp01(band);
+                float n = Mathf.Lerp(0.6f, 1f, Mathf.PerlinNoise(x * 0.2f, y * 0.06f));
+                px[y * size + x] = new Color(0.1f, 0.1f, 0.11f, Mathf.Clamp01(band * n));
+            }
+        }
+        tex.SetPixels(px);
+        tex.Apply();
+        return tex;
     }
 
     void UseSelectedObjectAsSource()
