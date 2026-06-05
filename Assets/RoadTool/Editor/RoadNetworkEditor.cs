@@ -901,14 +901,14 @@ public class RoadNetworkEditor : Editor
     void DrawExportPanel()
     {
         EditorGUILayout.Space(8);
-        EditorGUILayout.LabelField("Export (Substance Painter)", EditorStyles.boldLabel);
-        EditorGUILayout.HelpBox("Yol mesh'ini disari aktar, Substance Painter'da boya. OBJ paket gerektirmez ve SP direkt acar (UV + normal tasir). FBX icin Unity 'FBX Exporter' paketi gerekir (ilk seferinde sorar, otomatik kurar).", MessageType.None);
+        EditorGUILayout.LabelField("Export (Blender / Substance Painter)", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("Yolu disari aktar. OBJ her zaman acilir (Blender: File > Import > Wavefront .obj; Substance Painter direkt). FBX artik BINARY uretir - Blender ASCII FBX'i acmaz, binary'yi acar.", MessageType.Info);
         using (new EditorGUILayout.HorizontalScope())
         {
-            if (GUILayout.Button("Export FBX", GUILayout.Height(30)))
-                ExportRoadFbx();
-            if (GUILayout.Button("Export OBJ", GUILayout.Height(30)))
+            if (GUILayout.Button("Export OBJ (onerilen)", GUILayout.Height(32)))
                 ExportRoadObj();
+            if (GUILayout.Button("Export FBX (binary)", GUILayout.Height(32)))
+                ExportRoadFbx();
         }
     }
 
@@ -1045,14 +1045,39 @@ public class RoadNetworkEditor : Editor
             return;
         }
 
-        System.Reflection.MethodInfo method = exporterType.GetMethod("ExportObject", new[] { typeof(string), typeof(UnityEngine.Object) });
+        // Blender (and many tools) only read BINARY FBX. The FBX Exporter defaults to ASCII in
+        // some setups, so we force Binary through the public ExportModelOptions overload.
+        object exportOptions = null;
+        System.Reflection.MethodInfo method = null;
+        try
+        {
+            System.Type optionsType = System.Type.GetType("UnityEditor.Formats.Fbx.Exporter.ExportModelOptions, Unity.Formats.Fbx.Editor");
+            System.Type formatType = System.Type.GetType("UnityEditor.Formats.Fbx.Exporter.ExportFormat, Unity.Formats.Fbx.Editor");
+            if (optionsType != null && formatType != null)
+            {
+                exportOptions = System.Activator.CreateInstance(optionsType);
+                optionsType.GetProperty("ExportFormat")?.SetValue(exportOptions, System.Enum.ToObject(formatType, 1)); // 1 = Binary
+                method = exporterType.GetMethod("ExportObject", new[] { typeof(string), typeof(UnityEngine.Object), optionsType });
+            }
+        }
+        catch
+        {
+            exportOptions = null;
+            method = null;
+        }
+
         if (method == null)
         {
-            Debug.LogError("[RoadTool] FBX Exporter API bulunamadi (ExportObject). Lutfen 'Export OBJ' kullan.");
+            exportOptions = null;
+            method = exporterType.GetMethod("ExportObject", new[] { typeof(string), typeof(UnityEngine.Object) });
+        }
+        if (method == null)
+        {
+            Debug.LogError("[RoadTool] FBX Exporter API bulunamadi. Lutfen 'Export OBJ' kullan (Blender ve Substance Painter OBJ'yi acar).");
             return;
         }
 
-        string path = EditorUtility.SaveFilePanel("Export Road FBX", Application.dataPath, SanitizeName(Network.gameObject.name) + "_Road", "fbx");
+        string path = EditorUtility.SaveFilePanel("Export Road FBX (Binary)", Application.dataPath, SanitizeName(Network.gameObject.name) + "_Road", "fbx");
         if (string.IsNullOrEmpty(path))
             return;
 
@@ -1070,9 +1095,13 @@ public class RoadNetworkEditor : Editor
                 part.AddComponent<MeshRenderer>().sharedMaterials = srcRenderer != null ? srcRenderer.sharedMaterials : new Material[0];
             }
 
-            method.Invoke(null, new object[] { path, temp });
+            if (exportOptions != null)
+                method.Invoke(null, new object[] { path, temp, exportOptions });
+            else
+                method.Invoke(null, new object[] { path, temp });
+
             RefreshIfInProject(path);
-            Debug.Log("[RoadTool] FBX kaydedildi: " + path);
+            Debug.Log("[RoadTool] FBX (binary) kaydedildi: " + path);
             EditorUtility.RevealInFinder(path);
         }
         finally
