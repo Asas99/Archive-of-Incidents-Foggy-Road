@@ -1528,7 +1528,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: d339a8e4a0b11c146885b174e281a209, type: 2}
     - target: {fileID: 919132149155446097, guid: 730766c0e826c7b4fa7995da0f52936f, type: 3}
       propertyPath: m_Name
-      value: agac
+      value: "agacdetayl\u0131ortapolydi\u011Ferlerid\xFCs\xFCkpoly"
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
