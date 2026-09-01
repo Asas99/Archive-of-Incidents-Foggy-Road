@@ -38,7 +38,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: 657647956abe62744b6e7ef4fdb20bae, type: 3}
+        m_Texture: {fileID: 2800000, guid: 988adeaf39395d642baa6b27180accc4, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
@@ -107,7 +107,7 @@ Material:
     - _CrackScale: 0.5
     - _Cull: 2
     - _Cutoff: 0.5
-    - _DampFilm: 0.097
+    - _DampFilm: 0.089
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _DetailNormalScale: 0.77
@@ -119,16 +119,16 @@ Material:
     - _GlossyReflections: 0
     - _GrainScale: 20.2
     - _GrainStrength: 0
-    - _MacroStrength: 0.835
+    - _MacroStrength: 1
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
-    - _PuddleEdge: 0.366
+    - _PuddleEdge: 0.355
     - _PuddleNoiseScale: 0.12
-    - _PuddleRandomness: 1
+    - _PuddleRandomness: 0.85
     - _QueueOffset: 0
     - _ReceiveShadows: 1
-    - _Roughness: 0.497
+    - _Roughness: 0.685
     - _RoughnessVariation: 0.065
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
@@ -136,11 +136,11 @@ Material:
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
-    - _WaterFilm: 0.245
+    - _WaterFilm: 0.358
     - _WearDarkening: 0.34
-    - _WetDarkening: 0.55
-    - _WetRoughness: 0
-    - _Wetness: 0.57
+    - _WetDarkening: 0.714
+    - _WetRoughness: 0.218
+    - _Wetness: 0.397
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:
