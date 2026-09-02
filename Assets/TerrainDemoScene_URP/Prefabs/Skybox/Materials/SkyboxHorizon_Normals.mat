@@ -1,0 +1,91 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: SkyboxHorizon_Normals
+  m_Shader: {fileID: 4800000, guid: 894e8aae21aae1341a8d8d2e484d0787, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _AOMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: 8ec8e8a09f13017499f254552ea558b8, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailNormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _HeightMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RoughnessMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AOStrength: 1
+    - _CrackAmount: 0.12
+    - _CrackScale: 4
+    - _Cutoff: 0.5
+    - _DampFilm: 0.22
+    - _DetailNormalScale: 0.35
+    - _DetailNormalTiling: 1
+    - _FresnelBoost: 0.18
+    - _GrainScale: 18
+    - _HeightCenter: 0.5
+    - _HeightStrength: 0.025
+    - _MacroStrength: 0.35
+    - _NormalScale: 1
+    - _ParallaxFadeEnd: 80
+    - _ParallaxFadeStart: 35
+    - _ParallaxMaxSteps: 24
+    - _ParallaxMinSteps: 8
+    - _ProceduralGrain: 0.35
+    - _PuddleCoverage: 0.55
+    - _PuddleEdge: 0.16
+    - _PuddleFromHeight: 0.75
+    - _PuddleNoiseScale: 0.1
+    - _PuddleNormalFlatten: 0.92
+    - _PuddleRandomness: 0.45
+    - _PuddleRoughness: 0.055
+    - _Roughness: 0.82
+    - _RoughnessMapStrength: 0
+    - _RoughnessVariation: 0.08
+    - _WaterFilm: 0.75
+    - _WearDarkening: 0.18
+    - _WetDarkening: 0.38
+    - _WetNormalFlatten: 0.7
+    - _WetRoughness: 0.12
+    - _Wetness: 0.72
+    m_Colors:
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+    - _ReflectionTint: {r: 0.72, g: 0.82, b: 0.95, a: 1}
+    - _WetTint: {r: 0.82, g: 0.9, b: 1, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
