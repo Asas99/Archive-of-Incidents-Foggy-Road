@@ -8,8 +8,8 @@ OcclusionCullingSettings:
     smallestOccluder: 5
     smallestHole: 0.25
     backfaceThreshold: 100
-  m_SceneGUID: 00000000000000000000000000000000
-  m_OcclusionCullingData: {fileID: 0}
+  m_SceneGUID: 9ed04506287e4e74cbafd469869a2c66
+  m_OcclusionCullingData: {fileID: 36300000, guid: 36ed6c0aa22874144ab0a0b95a9d9029, type: 2}
 --- !u!104 &2
 RenderSettings:
   m_ObjectHideFlags: 0
@@ -131,7 +131,7 @@ GameObject:
   - component: {fileID: 755812}
   - component: {fileID: 755811}
   - component: {fileID: 755814}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Terrain
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -171,7 +171,7 @@ Terrain:
   m_TreeDistance: 5000
   m_TreeBillboardDistance: 50
   m_TreeCrossFadeLength: 5
-  m_TreeMaximumFullLODCount: 50
+  m_TreeMaximumFullLODCount: 200
   m_DetailObjectDistance: 80
   m_DetailObjectDensity: 1
   m_HeightmapPixelError: 5
@@ -207,7 +207,7 @@ Transform:
   m_GameObject: {fileID: 755810}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -1557}
+  m_LocalPosition: {x: -453, y: -9.4, z: -1557}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -229,11 +229,14 @@ MonoBehaviour:
   - {fileID: 755812}
   splatmapResolution: 256
   colorMapResolution: 256
-  layerSettings: []
+  layerSettings:
+  - enabled: 1
+    layer: {fileID: 8574412962073106934, guid: e83e5b2c03473f74983ef0f5b9c160c0, type: 2}
+    modifierStack: []
   autoRepaint: 0
   terrainListeners: []
   bounds:
-    m_Center: {x: 500, y: 300, z: -307}
+    m_Center: {x: 47, y: 290.6, z: -307}
     m_Extent: {x: 500, y: 300, z: 1250}
   filterShader: {fileID: 4800000, guid: 0f44df78e3d64d9cb2616cac3d84cb77, type: 3}
 --- !u!1 &79308606
@@ -829,7 +832,7 @@ Transform:
   m_GameObject: {fileID: 214804121}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -7.4622645, y: 1.06, z: -6.27}
+  m_LocalPosition: {x: -7.4622645, y: 2.56, z: -6.27}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -888,6 +891,10 @@ PrefabInstance:
     - target: {fileID: 8423933847119075203, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
       propertyPath: m_Name
       value: SkyboxMountains
+      objectReference: {fileID: 0}
+    - target: {fileID: 8423933847119075203, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1086,7 +1093,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!81 &945740489
 AudioListener:
   m_ObjectHideFlags: 0
@@ -1289,6 +1296,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 730766c0e826c7b4fa7995da0f52936f, type: 3}
       propertyPath: m_Name
       value: "agacdetayl\u0131ortapolydi\u011Ferlerid\xFCs\xFCkpoly"
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 730766c0e826c7b4fa7995da0f52936f, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
