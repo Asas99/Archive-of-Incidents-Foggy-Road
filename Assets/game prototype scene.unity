@@ -720,6 +720,28 @@ Transform:
   - {fileID: 2072172618}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &234706636
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b5a4738b539472faa518e606162927c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  enabled: 1
+  label: Curvature
+  blendMode: 0
+  opacity: 100
+  passIndex: 2
+  solver: 0
+  minMax: {x: 0.102970235, y: 0.3529702}
+  radius: 8.4
+  minFalloff: 0.103
+  maxFalloff: 0.001
 --- !u!1001 &312401646
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -781,6 +803,27 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+--- !u!114 &353301952
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a035df583564519a95ec430b2620ba3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  enabled: 1
+  label: Direction
+  blendMode: 0
+  opacity: 100
+  passIndex: 5
+  xAngle: 42.2
+  yAngle: 159
+  addSunDirection: 0
+  levels: {x: 0.5940597, y: 0.76237595}
 --- !u!1 &383414338
 GameObject:
   m_ObjectHideFlags: 0
@@ -1405,6 +1448,48 @@ Transform:
   - {fileID: 1034401167}
   m_Father: {fileID: 79308607}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1147279444
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a035df583564519a95ec430b2620ba3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  enabled: 1
+  label: Direction
+  blendMode: 0
+  opacity: 100
+  passIndex: 5
+  xAngle: 45
+  yAngle: 0
+  addSunDirection: 0
+  levels: {x: 0.2376238, y: 0.69108903}
+--- !u!114 &1192286812
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a035df583564519a95ec430b2620ba3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  enabled: 1
+  label: Direction
+  blendMode: 0
+  opacity: 100
+  passIndex: 5
+  xAngle: 45
+  yAngle: 155
+  addSunDirection: 0
+  levels: {x: 0.36237597, y: 0.6336634}
 --- !u!1 &1293384343
 GameObject:
   m_ObjectHideFlags: 0
@@ -1628,6 +1713,27 @@ Transform:
   - {fileID: 1293384347}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1403083486
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a035df583564519a95ec430b2620ba3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  enabled: 1
+  label: Direction
+  blendMode: 0
+  opacity: 100
+  passIndex: 5
+  xAngle: 45
+  yAngle: 153
+  addSunDirection: 0
+  levels: {x: 0.43564343, y: 0.65940595}
 --- !u!1 &1508494805
 GameObject:
   m_ObjectHideFlags: 0
@@ -1734,15 +1840,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6af2d410bf489d842a543a60d605af5f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  terrains: []
+  terrains:
+  - {fileID: 1508494807}
   splatmapResolution: 256
   colorMapResolution: 256
-  layerSettings: []
+  layerSettings:
+  - enabled: 1
+    layer: {fileID: 8574412962073106934, guid: d23bf86670545b845aa9afda4d560b29, type: 2}
+    modifierStack:
+    - {fileID: 234706636}
+    - {fileID: 353301952}
+  - enabled: 1
+    layer: {fileID: 8574412962073106934, guid: 2925b7341451ade41b70c703a7cc2d9e, type: 2}
+    modifierStack:
+    - {fileID: 1403083486}
+  - enabled: 1
+    layer: {fileID: 8574412962073106934, guid: 2b0e8b716a6c293488912f0f444a497e, type: 2}
+    modifierStack:
+    - {fileID: 1192286812}
+  - enabled: 1
+    layer: {fileID: 8574412962073106934, guid: c24531e9e9476c044ab57779324d527d, type: 2}
+    modifierStack:
+    - {fileID: 1147279444}
   autoRepaint: 0
   terrainListeners: []
   bounds:
-    m_Center: {x: NaN, y: NaN, z: NaN}
-    m_Extent: {x: NaN, y: NaN, z: NaN}
+    m_Center: {x: 500, y: 217.9049, z: 1295}
+    m_Extent: {x: 500, y: 300, z: 1750}
   filterShader: {fileID: 4800000, guid: 0f44df78e3d64d9cb2616cac3d84cb77, type: 3}
 --- !u!1 &1522532697
 GameObject:
@@ -2471,13 +2595,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1862201584}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.36514965, y: 0.24492635, z: -0.8925449, w: -0.10020198}
+  m_LocalRotation: {x: -0.57087076, y: 0.09793544, z: -0.06883018, w: -0.81226695}
   m_LocalPosition: {x: 0, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 149.31, y: 224.5, z: 0}
+  m_LocalEulerAnglesHint: {x: 70.2, y: 1066.25, z: 0}
 --- !u!114 &1862201587
 MonoBehaviour:
   m_ObjectHideFlags: 0
