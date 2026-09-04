@@ -76,33 +76,79 @@ public sealed class ForestRoadTerrainGenerator : EditorWindow
     [SerializeField] private bool replaceExistingTerrainVegetation = true;
 
     [Header("Road Fit")]
-    [Tooltip("Terrain remains nearly flat this many metres beyond the asphalt edge.")]
-    [SerializeField, Min(0f)] private float shoulderWidth = 4.5f;
-    [Tooltip("Randomly widens and narrows the shoulder so it does not trace the road uniformly.")]
-    [SerializeField, Range(0f, 8f)] private float shoulderIrregularity = 2.5f;
-    [Tooltip("Width of the smooth transition from road level to forest terrain.")]
-    [SerializeField, Min(1f)] private float roadBlendWidth = 14f;
-    [Tooltip("Makes some banks short and steep while others remain broad and gentle.")]
-    [SerializeField, Range(0f, 1f)] private float slopeRandomness = 0.72f;
+    [Tooltip("Very narrow verge kept close to road height before the drainage hollow begins. The reference has almost no broad flat shoulder.")]
+    [SerializeField, Range(0f, 5f)] private float shoulderWidth = 0.35f;
+    [Tooltip("Small organic variation of the road-edge profile. Keep low for a believable engineered cut.")]
+    [SerializeField, Range(0f, 5f)] private float shoulderIrregularity = 0.60f;
+    [Tooltip("Distance over which the cut bank settles into the surrounding forest terrain.")]
+    [SerializeField, Range(4f, 80f)] private float roadBlendWidth = 42f;
+    [Tooltip("Varies bank steepness gently along the road without creating random cliffs.")]
+    [SerializeField, Range(0f, 1f)] private float slopeRandomness = 0.38f;
     [Tooltip("Places terrain slightly below the road to prevent z-fighting.")]
     [SerializeField, Range(0.01f, 0.30f)] private float roadClearance = 0.07f;
     [Tooltip("Maximum gap between points sampled from the road mesh.")]
-    [SerializeField, Range(0.5f, 4f)] private float roadSampleSpacing = 1.5f;
+    [SerializeField, Range(0.35f, 4f)] private float roadSampleSpacing = 0.9f;
+
+    [Header("Roadside Cut + Drainage Profile")]
+    [Tooltip("Shallow drainage hollow immediately outside the asphalt, like the reference road cut.")]
+    [SerializeField, Range(0f, 3f)] private float ditchDepth = 0.45f;
+    [Tooltip("Distance from asphalt edge to the centre of the shallow hollow.")]
+    [SerializeField, Range(0.3f, 10f)] private float ditchCenter = 2.0f;
+    [Tooltip("Overall width of the drainage hollow.")]
+    [SerializeField, Range(0.5f, 14f)] private float ditchWidth = 4.0f;
+    [Tooltip("Where the forest bank begins to climb after the hollow.")]
+    [SerializeField, Range(1f, 18f)] private float bankToeDistance = 3.2f;
+    [Tooltip("Where the main bank reaches its crest/forest-floor level.")]
+    [SerializeField, Range(3f, 40f)] private float bankCrestDistance = 16f;
+    [Tooltip("A subtle raised lip at the road/forest boundary; this makes the road feel cut into the terrain instead of painted on top.")]
+    [SerializeField, Range(0f, 4f)] private float edgeLipHeight = 0.75f;
+    [Tooltip("Distance of the raised lip from the asphalt edge.")]
+    [SerializeField, Range(1f, 16f)] private float edgeLipDistance = 4.8f;
+    [SerializeField, Range(0.5f, 12f)] private float edgeLipWidth = 4.2f;
+
+    [Header("Forks / Washington Macro Terrain")]
+    [Tooltip("Outer radius of the local road cut. Outside this, the full rolling landscape remains intact.")]
+    [SerializeField, Range(12f, 90f)] private float roadCutReach = 42f;
+    [Tooltip("Large rounded foothills across the entire Terrain.")]
+    [SerializeField, Range(0f, 45f)] private float macroTerrainAmplitude = 20f;
+    [SerializeField, Range(45f, 380f)] private float macroTerrainScale = 120f;
+    [Tooltip("Mid-size rises and hollows layered over the broad terrain.")]
+    [SerializeField, Range(0f, 28f)] private float rollingTerrainAmplitude = 10f;
+    [SerializeField, Range(18f, 180f)] private float rollingTerrainScale = 48f;
+    [Tooltip("Soft ridge structure used to break up broad hills.")]
+    [SerializeField, Range(0f, 20f)] private float roundedRidgeAmplitude = 8f;
+    [SerializeField, Range(28f, 200f)] private float roundedRidgeScale = 70f;
+    [Tooltip("Number of explicit broad hill/valley masses. These guarantee large landforms even on quiet Perlin seeds.")]
+    [SerializeField, Range(6, 28)] private int macroLandformCount = 16;
+    [SerializeField, Range(0.4f, 2.0f)] private float macroLandformStrength = 1.15f;
+    [Tooltip("How much bank height/width changes along the road.")]
+    [SerializeField, Range(0f, 1f)] private float bankPlanIrregularity = 0.92f;
+    [Tooltip("General forest floor elevation above road grade before hills and valleys.")]
+    [SerializeField, Range(-8f, 20f)] private float forestFloorBias = 6f;
+
+    [Header("Terrain Vertical Capacity")]
+    [Tooltip("Unity Terrain cannot go below Transform Y. Automatically lowers the Terrain base so valleys/ditches do not clamp into a flat plane.")]
+    [SerializeField] private bool autoCreateVerticalHeadroom = true;
+    [SerializeField, Range(5f, 90f)] private float belowRoadHeadroom = 48f;
+    [Tooltip("Expands TerrainData.size.y if the current vertical range is too small for the requested relief.")]
+    [SerializeField] private bool autoExpandVerticalRange = true;
+    [SerializeField, Range(40f, 500f)] private float minimumVerticalRange = 180f;
 
     [Header("Terrain Shape")]
-    [SerializeField, Range(0f, 20f)] private float bankRise = 1.8f;
-    [Tooltip("Adds independent high and low bank sections on both sides of the road.")]
-    [SerializeField, Range(0f, 15f)] private float bankHeightVariation = 4.8f;
-    [SerializeField, Range(0f, 20f)] private float broadHillAmplitude = 6.5f;
-    [SerializeField, Range(20f, 300f)] private float broadHillScale = 88f;
-    [Tooltip("Occasional local mounds and raised forest banks.")]
-    [SerializeField, Range(0f, 15f)] private float moundAmplitude = 4.5f;
-    [SerializeField, Range(12f, 120f)] private float moundScale = 42f;
-    [Tooltip("Bends the noise coordinates to avoid obvious Perlin blobs and parallel bands.")]
-    [SerializeField, Range(0f, 80f)] private float domainWarp = 34f;
-    [SerializeField, Range(0f, 5f)] private float groundVariation = 0.9f;
-    [SerializeField, Range(3f, 40f)] private float groundVariationScale = 14f;
-    [SerializeField, Range(0, 4)] private int smoothingPasses = 1;
+    [Tooltip("Average height of the cut forest bank above road level.")]
+    [SerializeField, Range(0f, 16f)] private float bankRise = 6.5f;
+    [Tooltip("Slow local variation in bank height. Kept modest so the road corridor stays believable.")]
+    [SerializeField, Range(0f, 10f)] private float bankHeightVariation = 5.2f;
+    [SerializeField, Range(0f, 16f)] private float broadHillAmplitude = 4.0f;
+    [SerializeField, Range(20f, 300f)] private float broadHillScale = 105f;
+    [Tooltip("Occasional low forest-floor mounds far from the asphalt.")]
+    [SerializeField, Range(0f, 8f)] private float moundAmplitude = 2.6f;
+    [SerializeField, Range(12f, 120f)] private float moundScale = 52f;
+    [Tooltip("Bends noise coordinates slightly to avoid obvious Perlin repetition.")]
+    [SerializeField, Range(0f, 60f)] private float domainWarp = 18f;
+    [SerializeField, Range(0f, 4f)] private float groundVariation = 0.65f;
+    [SerializeField, Range(3f, 40f)] private float groundVariationScale = 18f;
+    [SerializeField, Range(0, 4)] private int smoothingPasses = 2;
     [SerializeField] private int seed = 1847;
 
     [Header("Safety")]
@@ -198,6 +244,35 @@ public sealed class ForestRoadTerrainGenerator : EditorWindow
         DrawProperty(serializedWindow, "roadClearance");
         DrawProperty(serializedWindow, "roadSampleSpacing");
         EditorGUILayout.Space(8f);
+        DrawSection("ROADSIDE CUT + DRAINAGE PROFILE");
+        DrawProperty(serializedWindow, "ditchDepth");
+        DrawProperty(serializedWindow, "ditchCenter");
+        DrawProperty(serializedWindow, "ditchWidth");
+        DrawProperty(serializedWindow, "bankToeDistance");
+        DrawProperty(serializedWindow, "bankCrestDistance");
+        DrawProperty(serializedWindow, "edgeLipHeight");
+        DrawProperty(serializedWindow, "edgeLipDistance");
+        DrawProperty(serializedWindow, "edgeLipWidth");
+        EditorGUILayout.Space(8f);
+        DrawSection("FORKS / WASHINGTON MACRO TERRAIN");
+        DrawProperty(serializedWindow, "roadCutReach");
+        DrawProperty(serializedWindow, "macroTerrainAmplitude");
+        DrawProperty(serializedWindow, "macroTerrainScale");
+        DrawProperty(serializedWindow, "rollingTerrainAmplitude");
+        DrawProperty(serializedWindow, "rollingTerrainScale");
+        DrawProperty(serializedWindow, "roundedRidgeAmplitude");
+        DrawProperty(serializedWindow, "roundedRidgeScale");
+        DrawProperty(serializedWindow, "macroLandformCount");
+        DrawProperty(serializedWindow, "macroLandformStrength");
+        DrawProperty(serializedWindow, "bankPlanIrregularity");
+        DrawProperty(serializedWindow, "forestFloorBias");
+        EditorGUILayout.Space(8f);
+        DrawSection("TERRAIN VERTICAL CAPACITY");
+        DrawProperty(serializedWindow, "autoCreateVerticalHeadroom");
+        DrawProperty(serializedWindow, "belowRoadHeadroom");
+        DrawProperty(serializedWindow, "autoExpandVerticalRange");
+        DrawProperty(serializedWindow, "minimumVerticalRange");
+        EditorGUILayout.Space(8f);
         DrawSection("TERRAIN SHAPE");
         DrawProperty(serializedWindow, "bankRise");
         DrawProperty(serializedWindow, "bankHeightVariation");
@@ -248,8 +323,8 @@ public sealed class ForestRoadTerrainGenerator : EditorWindow
 
         EditorGUILayout.Space(8f);
         EditorGUILayout.HelpBox(
-            "Reference preset leaves a broad shoulder first, then creates independent steep, low and high " +
-            "forest banks. NEW RANDOM SEED changes their locations without changing the controls.",
+            "Forks preset creates large hills, valleys and ridges across the ENTIRE Terrain, then cuts the road locally through them. " +
+            "It also creates vertical headroom below road grade so low areas are not flattened by Unity Terrain's zero-height limit.",
             MessageType.None);
         EditorGUILayout.EndScrollView();
     }
@@ -266,20 +341,51 @@ public sealed class ForestRoadTerrainGenerator : EditorWindow
 
     private void ApplyReferencePreset()
     {
-        shoulderWidth = 4.5f;
-        shoulderIrregularity = 2.5f;
-        roadBlendWidth = 14f;
-        slopeRandomness = 0.72f;
+        // Strong camera-readable Forks/Olympic Peninsula terrain. The road is only a local cut;
+        // the large landscape keeps rolling behind it in every direction.
+        shoulderWidth = 0.35f;
+        shoulderIrregularity = 0.60f;
+        roadBlendWidth = 42f;
+        slopeRandomness = 0.78f;
         roadClearance = 0.07f;
-        bankRise = 1.8f;
-        bankHeightVariation = 4.8f;
-        broadHillAmplitude = 6.5f;
-        broadHillScale = 88f;
-        moundAmplitude = 4.5f;
-        moundScale = 42f;
-        domainWarp = 34f;
-        groundVariation = 0.9f;
-        groundVariationScale = 14f;
+        roadSampleSpacing = 0.75f;
+
+        ditchDepth = 0.45f;
+        ditchCenter = 2.0f;
+        ditchWidth = 4.0f;
+        bankToeDistance = 3.2f;
+        bankCrestDistance = 16f;
+        edgeLipHeight = 0.75f;
+        edgeLipDistance = 4.8f;
+        edgeLipWidth = 4.2f;
+
+        roadCutReach = 42f;
+        macroTerrainAmplitude = 20f;
+        macroTerrainScale = 120f;
+        rollingTerrainAmplitude = 10f;
+        rollingTerrainScale = 48f;
+        roundedRidgeAmplitude = 8f;
+        roundedRidgeScale = 70f;
+        macroLandformCount = 16;
+        macroLandformStrength = 1.15f;
+        bankPlanIrregularity = 0.92f;
+        forestFloorBias = 6f;
+
+        autoCreateVerticalHeadroom = true;
+        belowRoadHeadroom = 48f;
+        autoExpandVerticalRange = true;
+        minimumVerticalRange = 180f;
+
+        bankRise = 6.5f;
+        bankHeightVariation = 5.2f;
+        broadHillAmplitude = 4.0f;
+        broadHillScale = 82f;
+        moundAmplitude = 2.6f;
+        moundScale = 38f;
+        domainWarp = 32f;
+        groundVariation = 0.65f;
+        groundVariationScale = 15f;
+
         roadsideMudWidth = 8f;
         smallPatchScale = 19f;
         largePatchScale = 63f;
@@ -287,6 +393,7 @@ public sealed class ForestRoadTerrainGenerator : EditorWindow
         textureContrast = 1.18f;
         forestGreenness = 1.55f;
         greenRoadEdgeBoost = 1.15f;
+
         canopyTreesPerHectare = 520;
         secondaryTreesPerHectare = 180;
         saplingsPerHectare = 480;
@@ -295,10 +402,10 @@ public sealed class ForestRoadTerrainGenerator : EditorWindow
         maximumVegetationInstances = 16000;
         treeRoadClearance = 4.5f;
         undergrowthRoadClearance = 1.15f;
-        maximumTreeSlope = 38f;
-        maximumUndergrowthSlope = 50f;
+        maximumTreeSlope = 44f;
+        maximumUndergrowthSlope = 56f;
         vegetationClusterScale = 34f;
-        smoothingPasses = 1;
+        smoothingPasses = 1; // V5 keeps macro relief; separate corridor smoothing removes only road-edge wedges.
         Repaint();
     }
 
@@ -612,11 +719,26 @@ public sealed class ForestRoadTerrainGenerator : EditorWindow
             if (samples.Count == 0)
                 throw new InvalidOperationException("No road vertices overlap the selected Terrain.");
 
+            EnsureTerrainVerticalCapacity(data, samples);
+            terrainPosition = targetTerrain.transform.position;
+            terrainSize = data.size;
+
             EditorUtility.DisplayProgressBar("Forest Road Terrain", "Building road distance field...", 0.18f);
             RoadField field = BuildRoadField(samples, resolution, terrainSize);
 
             EditorUtility.DisplayProgressBar("Forest Road Terrain", "Generating natural height field...", 0.40f);
             float[,] heights = GenerateHeights(data, terrainPosition, field);
+
+            // Remove only the narrow diagonal/triangular seams that can appear where the road
+            // elevation field changes nearest sample. This runs inside the road corridor and is
+            // deliberately mild, so the large Forks-style banks, valleys and humps stay intact.
+            EditorUtility.DisplayProgressBar("Forest Road Terrain", "Softening roadside seam artifacts...", 0.60f);
+            heights = SmoothRoadCorridorSeams(
+                heights,
+                field.distance,
+                terrainSize,
+                Mathf.Max(bankCrestDistance + 10f, roadCutReach * 0.72f),
+                2);
 
             for (int pass = 0; pass < smoothingPasses; pass++)
             {
@@ -624,7 +746,7 @@ public sealed class ForestRoadTerrainGenerator : EditorWindow
                     "Forest Road Terrain",
                     "Softening terrain pass " + (pass + 1) + " / " + smoothingPasses + "...",
                     0.62f + pass * 0.05f);
-                heights = SmoothAwayFromRoad(heights, field.distance, terrainSize, shoulderWidth + 0.5f);
+                heights = SmoothAwayFromRoad(heights, field.distance, terrainSize, Mathf.Max(bankCrestDistance + 2.0f, edgeLipDistance + edgeLipWidth));
             }
 
             Undo.RegisterCompleteObjectUndo(data, "Generate Forest Road Terrain");
@@ -1224,7 +1346,70 @@ public sealed class ForestRoadTerrainGenerator : EditorWindow
             }
         }
 
+        // IMPORTANT: nearest-road propagation creates a Voronoi-like road height field.
+        // On curved/sloped roads the borders between nearest samples can become diagonal wedges
+        // that shoot from the asphalt into the bank. Diffuse ONLY the propagated road elevation
+        // while keeping real road sample cells pinned to the mesh height. Distance remains exact.
+        roadY = SmoothRoadElevationField(roadY, seedHeight, seedCount, distance, terrainSize);
+
         return new RoadField(distance, roadY);
+    }
+
+    private static float[,] SmoothRoadElevationField(
+        float[,] source,
+        float[,] seedHeight,
+        int[,] seedCount,
+        float[,] distance,
+        Vector3 terrainSize)
+    {
+        int resolution = source.GetLength(0);
+        float cellX = terrainSize.x / Mathf.Max(1f, resolution - 1f);
+        float cellZ = terrainSize.z / Mathf.Max(1f, resolution - 1f);
+        float cellSize = Mathf.Max(0.01f, Mathf.Min(cellX, cellZ));
+
+        // Around 8-12 metres of diffusion is enough to remove nearest-sample seams without
+        // erasing genuine road grade changes. Clamp keeps large terrains reasonably fast.
+        int passes = Mathf.Clamp(Mathf.CeilToInt(10f / cellSize), 5, 16);
+        float[,] current = (float[,])source.Clone();
+        float[,] next = new float[resolution, resolution];
+
+        for (int pass = 0; pass < passes; pass++)
+        {
+            for (int z = 0; z < resolution; z++)
+            {
+                for (int x = 0; x < resolution; x++)
+                {
+                    if (seedCount[z, x] > 0)
+                    {
+                        // Actual sampled road surface is authoritative.
+                        next[z, x] = seedHeight[z, x];
+                        continue;
+                    }
+
+                    int left = Mathf.Max(0, x - 1);
+                    int right = Mathf.Min(resolution - 1, x + 1);
+                    int down = Mathf.Max(0, z - 1);
+                    int up = Mathf.Min(resolution - 1, z + 1);
+
+                    // Stable weighted diffusion. Strong close to the road (where seams are visible),
+                    // progressively gentler farther away so large-scale road grade is retained.
+                    float center = current[z, x];
+                    float neighbourAverage = (
+                        current[z, left] + current[z, right] +
+                        current[down, x] + current[up, x]) * 0.25f;
+
+                    float nearRoad = 1f - Smooth01((distance[z, x] - 1f) / 55f);
+                    float strength = Mathf.Lerp(0.24f, 0.72f, nearRoad);
+                    next[z, x] = Mathf.Lerp(center, neighbourAverage, strength);
+                }
+            }
+
+            float[,] swap = current;
+            current = next;
+            next = swap;
+        }
+
+        return current;
     }
 
     private static void Relax(
@@ -1272,88 +1457,344 @@ public sealed class ForestRoadTerrainGenerator : EditorWindow
         float[,] heights = new float[resolution, resolution];
         float noiseOffsetX = 1000f + seed * 0.173f;
         float noiseOffsetZ = 2000f + seed * 0.347f;
+        LandformFeature[] landforms = BuildLandformFeatures(terrainPosition, size);
 
         for (int z = 0; z < resolution; z++)
         {
             if ((z & 31) == 0)
-                EditorUtility.DisplayProgressBar("Forest Road Terrain", "Generating natural height field...", 0.40f + 0.20f * z / resolution);
+                EditorUtility.DisplayProgressBar("Forest Road Terrain", "Building large rolling landforms + road cut...", 0.40f + 0.20f * z / resolution);
 
             float worldZ = terrainPosition.z + z / (resolution - 1f) * size.z;
             for (int x = 0; x < resolution; x++)
             {
                 float worldX = terrainPosition.x + x / (resolution - 1f) * size.x;
                 float distance = field.distance[z, x];
+                float roadSurfaceY = field.roadY[z, x] - roadClearance;
 
-                // Low-frequency coordinate warping prevents matching shapes on both sides
-                // and removes the artificial "road trench" appearance.
-                float warpNoiseX = Mathf.PerlinNoise(
-                    (worldX + noiseOffsetZ) / 137f,
-                    (worldZ - noiseOffsetX) / 137f) - 0.5f;
-                float warpNoiseZ = Mathf.PerlinNoise(
-                    (worldX - noiseOffsetX) / 121f,
-                    (worldZ + noiseOffsetZ) / 121f) - 0.5f;
-                float warpedX = worldX + warpNoiseX * domainWarp;
-                float warpedZ = worldZ + warpNoiseZ * domainWarp;
+                // 1) FULL WORLD-SPACE LANDSCAPE. This is generated independently of road distance,
+                // so there is no long flat tabletop beside/behind the road.
+                float macroWarpX = (Mathf.PerlinNoise(
+                    (worldX + noiseOffsetZ * 0.71f) / 220f,
+                    (worldZ - noiseOffsetX * 0.63f) / 220f) - 0.5f) * domainWarp;
+                float macroWarpZ = (Mathf.PerlinNoise(
+                    (worldX - noiseOffsetX * 0.59f) / 245f,
+                    (worldZ + noiseOffsetZ * 0.67f) / 245f) - 0.5f) * domainWarp;
+                float warpedX = worldX + macroWarpX;
+                float warpedZ = worldZ + macroWarpZ;
 
-                // These fields differ spatially on the left and right sides of the road.
-                float edgeNoise = FractalNoise(
-                    (warpedX + noiseOffsetX) / 48f,
-                    (warpedZ + noiseOffsetZ) / 48f,
-                    3,
+                float macro = FractalNoise(
+                    (warpedX + noiseOffsetX) / Mathf.Max(1f, macroTerrainScale),
+                    (warpedZ + noiseOffsetZ) / Mathf.Max(1f, macroTerrainScale),
+                    4,
                     0.53f);
-                float steepNoise = FractalNoise(
-                    (warpedX - noiseOffsetZ) / 61f,
-                    (warpedZ + noiseOffsetX) / 61f,
-                    3,
-                    0.51f);
-                float heightNoise = FractalNoise(
-                    (warpedX + noiseOffsetZ * 0.37f) / 74f,
-                    (warpedZ - noiseOffsetX * 0.41f) / 74f,
+                float macroSigned = (macro - 0.5f) * 2f;
+                macroSigned = Mathf.Sign(macroSigned) * Mathf.Pow(Mathf.Abs(macroSigned), 0.72f);
+                float macroRelief = macroSigned * macroTerrainAmplitude;
+
+                float rolling = FractalNoise(
+                    (warpedX - noiseOffsetZ * 0.83f) / Mathf.Max(1f, rollingTerrainScale),
+                    (warpedZ + noiseOffsetX * 0.79f) / Mathf.Max(1f, rollingTerrainScale),
                     4,
                     0.50f);
+                float rollingRelief = (rolling - 0.5f) * 2f * rollingTerrainAmplitude;
 
-                float localShoulder = Mathf.Max(
-                    1.5f,
-                    shoulderWidth + (edgeNoise - 0.5f) * 2f * shoulderIrregularity);
-                float steepFactor = Mathf.Lerp(1.45f, 0.42f, steepNoise * slopeRandomness + (1f - slopeRandomness) * 0.5f);
-                float localBlendWidth = Mathf.Max(2.5f, roadBlendWidth * steepFactor);
-                float transition = Smooth01((distance - localShoulder) / localBlendWidth);
+                float ridgeN = FractalNoise(
+                    (warpedX + noiseOffsetX * 0.41f) / Mathf.Max(1f, roundedRidgeScale),
+                    (warpedZ - noiseOffsetZ * 0.46f) / Mathf.Max(1f, roundedRidgeScale),
+                    3,
+                    0.50f);
+                float ridge = 1f - Mathf.Abs(ridgeN * 2f - 1f);
+                ridge = Smooth01(ridge);
+                float ridgeRelief = (ridge - 0.50f) * roundedRidgeAmplitude;
 
-                float broadNoise = FractalNoise(
-                    (warpedX + noiseOffsetX) / broadHillScale,
-                    (warpedZ + noiseOffsetZ) / broadHillScale,
-                    5,
+                // Explicit elliptical masses guarantee big visible hills/valleys even if a Perlin
+                // seed happens to be quiet in the current Terrain area.
+                float featureRelief = EvaluateLandformFeatures(landforms, worldX, worldZ);
+
+                float broad = FractalNoise(
+                    (warpedX + noiseOffsetZ * 0.12f) / Mathf.Max(1f, broadHillScale),
+                    (warpedZ - noiseOffsetX * 0.15f) / Mathf.Max(1f, broadHillScale),
+                    3,
                     0.52f);
-                broadNoise = (broadNoise - 0.50f) * 2f * broadHillAmplitude;
+                float broadRelief = (broad - 0.5f) * 2f * broadHillAmplitude;
 
-                float detailNoise = FractalNoise(
-                    (warpedX - noiseOffsetZ) / groundVariationScale,
-                    (warpedZ + noiseOffsetX) / groundVariationScale,
+                float detail = FractalNoise(
+                    (warpedX + noiseOffsetZ * 0.31f) / Mathf.Max(1f, groundVariationScale),
+                    (warpedZ - noiseOffsetX * 0.28f) / Mathf.Max(1f, groundVariationScale),
                     3,
                     0.48f);
-                detailNoise = (detailNoise - 0.5f) * 2f * groundVariation;
+                float detailRelief = (detail - 0.5f) * 2f * groundVariation;
 
-                // A thresholded field creates occasional raised sections instead of
-                // lifting the complete road edge by the same amount.
                 float moundNoise = FractalNoise(
-                    (warpedX + noiseOffsetX * 0.23f) / moundScale,
-                    (warpedZ - noiseOffsetZ * 0.19f) / moundScale,
+                    (warpedX + noiseOffsetX * 0.23f) / Mathf.Max(1f, moundScale),
+                    (warpedZ - noiseOffsetZ * 0.19f) / Mathf.Max(1f, moundScale),
                     3,
                     0.55f);
-                float moundMask = Smooth01((moundNoise - 0.57f) / 0.28f);
-                float mound = moundMask * moundMask * moundAmplitude;
+                float moundMask = Smooth01((moundNoise - 0.56f) / 0.24f);
+                float moundRelief = moundMask * moundMask * moundAmplitude;
 
-                float localBankHeight = bankRise + Mathf.Pow(heightNoise, 1.7f) * bankHeightVariation;
-                float bankTransition = Smooth01((distance - localShoulder) / Mathf.Max(2.5f, localBlendWidth * 0.72f));
-                float bank = localBankHeight * bankTransition;
-                float roadSurfaceY = field.roadY[z, x] - roadClearance;
-                float naturalRelief = Mathf.Max(-1.25f, bank + broadNoise + mound + detailNoise);
-                float targetWorldY = roadSurfaceY + transition * naturalRelief;
+                float naturalWorldY = roadSurfaceY + forestFloorBias +
+                                      macroRelief + rollingRelief + ridgeRelief +
+                                      featureRelief + broadRelief + detailRelief + moundRelief;
+
+                // 2) ROAD-CORRIDOR SHAPE. Shorter scales make bank height/width visibly change
+                // along the drive instead of repeating the same cross-section for kilometres.
+                float planA = FractalNoise(
+                    (warpedX + noiseOffsetX * 0.17f) / 41f,
+                    (warpedZ - noiseOffsetZ * 0.21f) / 41f,
+                    3,
+                    0.51f);
+                float planB = FractalNoise(
+                    (warpedX - noiseOffsetZ * 0.38f) / 64f,
+                    (warpedZ + noiseOffsetX * 0.34f) / 64f,
+                    3,
+                    0.50f);
+                float planC = FractalNoise(
+                    (warpedX + noiseOffsetZ * 0.57f) / 91f,
+                    (warpedZ + noiseOffsetX * 0.49f) / 91f,
+                    3,
+                    0.51f);
+
+                float localShoulder = Mathf.Max(0.08f,
+                    shoulderWidth + (planA - 0.5f) * 2f * shoulderIrregularity);
+
+                float irregular = bankPlanIrregularity;
+                float localToe = bankToeDistance * Mathf.Lerp(0.58f, 1.52f, Mathf.Lerp(0.5f, planA, irregular));
+                float localCrest = bankCrestDistance * Mathf.Lerp(0.60f, 1.60f, Mathf.Lerp(0.5f, planB, irregular));
+                localToe = Mathf.Max(localShoulder + 0.95f, localToe);
+                localCrest = Mathf.Max(localToe + 6.0f, localCrest);
+
+                // Larger roadside depression, several metres wide.
+                float localDitchCenter = Mathf.Max(localShoulder + 0.40f,
+                    ditchCenter * Mathf.Lerp(0.72f, 1.38f, planA));
+                float localDitchWidth = Mathf.Max(1.5f,
+                    ditchWidth * Mathf.Lerp(0.68f, 1.45f, planB));
+                float ditchHalfWidth = localDitchWidth * 0.5f;
+                float ditchT = Mathf.Abs(distance - localDitchCenter) / Mathf.Max(0.40f, ditchHalfWidth);
+                float ditchMask = Mathf.Max(0f, 1f - ditchT * ditchT);
+                ditchMask *= ditchMask;
+                float ditch = -ditchDepth * Mathf.Lerp(0.72f, 1.55f, planC) * ditchMask;
+
+                // Raised threshold / berm after the hollow.
+                float localLipDistance = Mathf.Max(localDitchCenter + ditchHalfWidth * 0.64f,
+                    edgeLipDistance * Mathf.Lerp(0.68f, 1.42f, planB));
+                float localLipWidth = Mathf.Max(1.5f,
+                    edgeLipWidth * Mathf.Lerp(0.64f, 1.48f, planA));
+                float lipT = Mathf.Abs(distance - localLipDistance) / Mathf.Max(0.40f, localLipWidth * 0.5f);
+                float lipMask = Mathf.Max(0f, 1f - lipT * lipT);
+                lipMask *= lipMask;
+                float lip = edgeLipHeight * Mathf.Lerp(0.62f, 1.60f, planC) * lipMask;
+
+                // Tall curved cut-bank, influenced by the big landform beneath it.
+                float terrainPressure = Mathf.Clamp(naturalWorldY - roadSurfaceY - forestFloorBias, -10f, 28f);
+                float localBankHeight = bankRise + (planC - 0.5f) * 2f * bankHeightVariation;
+                localBankHeight += Mathf.Max(0f, terrainPressure) * 0.32f;
+                localBankHeight += Mathf.Max(0f, featureRelief) * 0.14f;
+                localBankHeight = Mathf.Clamp(localBankHeight, 2.8f, 16.0f);
+
+                float bankT = Mathf.Clamp01((distance - localToe) / Mathf.Max(1.8f, localCrest - localToe));
+                float lowerWall = 1f - Mathf.Pow(1f - bankT, Mathf.Lerp(1.8f, 4.2f, planA));
+                float upperRound = Smooth01(bankT);
+                float bankShape = Mathf.Lerp(upperRound, lowerWall, Mathf.Lerp(0.50f, 0.90f, planB));
+                float bank = localBankHeight * bankShape;
+
+                // Broad bank-face hump/depression: changes silhouette, not just surface roughness.
+                float humpCenter = Mathf.Lerp(localToe, localCrest, Mathf.Lerp(0.32f, 0.70f, planC));
+                float humpWidth = Mathf.Max(2.6f, (localCrest - localToe) * Mathf.Lerp(0.24f, 0.48f, planA));
+                float humpT = Mathf.Abs(distance - humpCenter) / humpWidth;
+                float humpMask = Mathf.Max(0f, 1f - humpT * humpT);
+                humpMask *= humpMask;
+                float hump = humpMask * Mathf.Lerp(-1.8f, 3.0f, planB);
+
+                float vergeReveal = Smooth01((distance - localShoulder) / 0.52f);
+                float cutWorldY = roadSurfaceY + (ditch + lip + bank + hump) * vergeReveal;
+
+                // 3) HAND BACK TO NATURAL LANDSCAPE WHILE THE BANK IS STILL CLIMBING.
+                // No constant-height shelf after the crest. At roadCutReach, macro terrain is 100% intact.
+                float localReach = roadCutReach * Mathf.Lerp(0.76f, 1.38f, planC);
+                localReach = Mathf.Max(localCrest + 8f, localReach);
+                float handoffStart = Mathf.Lerp(localToe, localCrest, 0.38f);
+                float naturalBlend = Smooth01((distance - handoffStart) / Mathf.Max(6f, localReach - handoffStart));
+                float targetWorldY = Mathf.Lerp(cutWorldY, naturalWorldY, naturalBlend);
+
                 heights[z, x] = Mathf.Clamp01((targetWorldY - terrainPosition.y) / size.y);
             }
         }
 
         return heights;
+    }
+
+    private void EnsureTerrainVerticalCapacity(TerrainData data, List<RoadSample> samples)
+    {
+        if (data == null || samples == null || samples.Count == 0)
+            return;
+
+        float minRoadY = float.PositiveInfinity;
+        float maxRoadY = float.NegativeInfinity;
+        for (int i = 0; i < samples.Count; i++)
+        {
+            minRoadY = Mathf.Min(minRoadY, samples[i].worldY);
+            maxRoadY = Mathf.Max(maxRoadY, samples[i].worldY);
+        }
+
+        // This is deliberately conservative because explicit negative valley features can overlap.
+        float requestedBelow = Mathf.Max(
+            belowRoadHeadroom,
+            ditchDepth + macroTerrainAmplitude * 1.45f + rollingTerrainAmplitude +
+            roundedRidgeAmplitude + broadHillAmplitude +
+            macroTerrainAmplitude * macroLandformStrength * 0.90f + 10f);
+
+        if (autoCreateVerticalHeadroom)
+        {
+            float desiredBottomY = minRoadY - requestedBelow;
+            Vector3 position = targetTerrain.transform.position;
+            if (position.y > desiredBottomY + 0.01f)
+            {
+                Undo.RecordObject(targetTerrain.transform, "Create Terrain Vertical Headroom");
+                position.y = desiredBottomY;
+                targetTerrain.transform.position = position;
+                EditorUtility.SetDirty(targetTerrain.transform);
+                Debug.Log("Forest Road Terrain: Terrain base lowered to Y=" + desiredBottomY.ToString("F2") +
+                          " so valleys/ditches cannot clamp into a flat zero-height plane.");
+            }
+        }
+
+        if (autoExpandVerticalRange)
+        {
+            float estimatedAboveRoad = forestFloorBias + macroTerrainAmplitude * 1.55f +
+                                       rollingTerrainAmplitude + roundedRidgeAmplitude +
+                                       macroTerrainAmplitude * macroLandformStrength * 1.50f +
+                                       bankRise + bankHeightVariation + broadHillAmplitude + 24f;
+            float requiredRange = requestedBelow + estimatedAboveRoad + Mathf.Max(0f, maxRoadY - minRoadY);
+            float targetRange = Mathf.Max(minimumVerticalRange, requiredRange);
+            if (data.size.y < targetRange)
+            {
+                Undo.RecordObject(data, "Expand Terrain Vertical Range");
+                Vector3 newSize = data.size;
+                newSize.y = targetRange;
+                data.size = newSize;
+                EditorUtility.SetDirty(data);
+                Debug.Log("Forest Road Terrain: TerrainData vertical size expanded to " + targetRange.ToString("F1") + " m.");
+            }
+        }
+    }
+
+    private LandformFeature[] BuildLandformFeatures(Vector3 terrainPosition, Vector3 terrainSize)
+    {
+        int count = Mathf.Clamp(macroLandformCount, 6, 28);
+        LandformFeature[] features = new LandformFeature[count];
+        System.Random random = new System.Random(seed ^ 0x4A17C9B3);
+
+        float minRadius = Mathf.Max(28f, macroTerrainScale * 0.34f);
+        float maxRadius = Mathf.Max(minRadius + 10f, macroTerrainScale * 0.92f);
+
+        for (int i = 0; i < count; i++)
+        {
+            float nx = Mathf.Lerp(-0.12f, 1.12f, (float)random.NextDouble());
+            float nz = Mathf.Lerp(-0.12f, 1.12f, (float)random.NextDouble());
+            float cx = terrainPosition.x + nx * terrainSize.x;
+            float cz = terrainPosition.z + nz * terrainSize.z;
+            float rx = Mathf.Lerp(minRadius, maxRadius, (float)random.NextDouble());
+            float rz = rx * Mathf.Lerp(0.52f, 1.70f, (float)random.NextDouble());
+            float angle = (float)random.NextDouble() * Mathf.PI * 2f;
+
+            // Mostly rounded rises, with recurring broad depressions.
+            bool depression = (i % 5 == 4) || (i > 4 && random.NextDouble() < 0.20);
+            float sign = depression ? -1f : 1f;
+            float amplitude = macroTerrainAmplitude * macroLandformStrength *
+                              Mathf.Lerp(0.46f, 1.16f, (float)random.NextDouble()) * sign;
+
+            features[i] = new LandformFeature(
+                cx, cz, rx, rz, Mathf.Sin(angle), Mathf.Cos(angle), amplitude);
+        }
+
+        return features;
+    }
+
+    private static float EvaluateLandformFeatures(LandformFeature[] features, float worldX, float worldZ)
+    {
+        float total = 0f;
+        for (int i = 0; i < features.Length; i++)
+        {
+            LandformFeature feature = features[i];
+            float dx = worldX - feature.centerX;
+            float dz = worldZ - feature.centerZ;
+            float localX = dx * feature.cosAngle + dz * feature.sinAngle;
+            float localZ = -dx * feature.sinAngle + dz * feature.cosAngle;
+            float nx = localX / Mathf.Max(0.001f, feature.radiusX);
+            float nz = localZ / Mathf.Max(0.001f, feature.radiusZ);
+            float radial = Mathf.Sqrt(nx * nx + nz * nz);
+            if (radial >= 1f)
+                continue;
+
+            float t = 1f - radial;
+            float shape = t * t * (3f - 2f * t);
+            shape = Mathf.Pow(shape, 0.78f);
+            total += feature.amplitude * shape;
+        }
+
+        return total;
+    }
+
+    private static float[,] SmoothRoadCorridorSeams(
+        float[,] source,
+        float[,] distance,
+        Vector3 terrainSize,
+        float outerDistance,
+        int passes)
+    {
+        int resolution = source.GetLength(0);
+        float[,] current = (float[,])source.Clone();
+        float[,] next = new float[resolution, resolution];
+        float cellX = terrainSize.x / Mathf.Max(1f, resolution - 1f);
+        float cellZ = terrainSize.z / Mathf.Max(1f, resolution - 1f);
+        float innerProtect = Mathf.Max(0.30f, Mathf.Min(cellX, cellZ) * 0.55f);
+        float outer = Mathf.Max(innerProtect + 2f, outerDistance);
+
+        for (int pass = 0; pass < Mathf.Max(0, passes); pass++)
+        {
+            for (int z = 0; z < resolution; z++)
+            {
+                for (int x = 0; x < resolution; x++)
+                {
+                    float d = distance[z, x];
+                    if (d <= innerProtect || d >= outer)
+                    {
+                        next[z, x] = current[z, x];
+                        continue;
+                    }
+
+                    int left = Mathf.Max(0, x - 1);
+                    int right = Mathf.Min(resolution - 1, x + 1);
+                    int down = Mathf.Max(0, z - 1);
+                    int up = Mathf.Min(resolution - 1, z + 1);
+
+                    int left2 = Mathf.Max(0, x - 2);
+                    int right2 = Mathf.Min(resolution - 1, x + 2);
+                    int down2 = Mathf.Max(0, z - 2);
+                    int up2 = Mathf.Min(resolution - 1, z + 2);
+
+                    // Cross-shaped low-pass filter: it kills thin diagonal wedges but preserves
+                    // the overall bank profile much better than a broad 3x3/5x5 blur.
+                    float smooth = current[z, x] * 0.38f +
+                                   (current[z, left] + current[z, right] +
+                                    current[down, x] + current[up, x]) * 0.12f +
+                                   (current[z, left2] + current[z, right2] +
+                                    current[down2, x] + current[up2, x]) * 0.035f;
+
+                    float innerFade = Smooth01((d - innerProtect) / 2.5f);
+                    float outerFade = 1f - Smooth01((d - outer * 0.70f) / Mathf.Max(2f, outer * 0.30f));
+                    float strength = 0.44f * innerFade * outerFade;
+                    next[z, x] = Mathf.Lerp(current[z, x], smooth, strength);
+                }
+            }
+
+            float[,] swap = current;
+            current = next;
+            next = swap;
+        }
+
+        return current;
     }
 
     private static float[,] SmoothAwayFromRoad(float[,] source, float[,] distance, Vector3 terrainSize, float protectedWidth)
@@ -1558,6 +1999,28 @@ public sealed class ForestRoadTerrainGenerator : EditorWindow
             this.tileSize = tileSize;
             this.normalScale = normalScale;
             this.fallbackSmoothness = fallbackSmoothness;
+        }
+    }
+
+    private readonly struct LandformFeature
+    {
+        public readonly float centerX;
+        public readonly float centerZ;
+        public readonly float radiusX;
+        public readonly float radiusZ;
+        public readonly float sinAngle;
+        public readonly float cosAngle;
+        public readonly float amplitude;
+
+        public LandformFeature(float centerX, float centerZ, float radiusX, float radiusZ, float sinAngle, float cosAngle, float amplitude)
+        {
+            this.centerX = centerX;
+            this.centerZ = centerZ;
+            this.radiusX = radiusX;
+            this.radiusZ = radiusZ;
+            this.sinAngle = sinAngle;
+            this.cosAngle = cosAngle;
+            this.amplitude = amplitude;
         }
     }
 

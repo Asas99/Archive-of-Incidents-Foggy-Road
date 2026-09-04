@@ -1639,6 +1639,7 @@ GameObject:
   - component: {fileID: 1508494808}
   - component: {fileID: 1508494807}
   - component: {fileID: 1508494806}
+  - component: {fileID: 1508494809}
   m_Layer: 0
   m_Name: Terrain
   m_TagString: Untagged
@@ -1664,7 +1665,7 @@ TerrainCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_TerrainData: {fileID: 15600000, guid: 1079dba1eb168334783dd1dfcbdfc295, type: 2}
+  m_TerrainData: {fileID: 15600000, guid: 65edf7f5a6f7b584fad05ff484e8ecc8, type: 2}
   m_EnableTreeColliders: 1
 --- !u!218 &1508494807
 Terrain:
@@ -1675,7 +1676,7 @@ Terrain:
   m_GameObject: {fileID: 1508494805}
   m_Enabled: 1
   serializedVersion: 6
-  m_TerrainData: {fileID: 15600000, guid: 1079dba1eb168334783dd1dfcbdfc295, type: 2}
+  m_TerrainData: {fileID: 15600000, guid: 65edf7f5a6f7b584fad05ff484e8ecc8, type: 2}
   m_TreeDistance: 5000
   m_TreeBillboardDistance: 50
   m_TreeCrossFadeLength: 5
@@ -1715,12 +1716,34 @@ Transform:
   m_GameObject: {fileID: 1508494805}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -455}
+  m_LocalPosition: {x: 0, y: -82.09509, z: -455}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1508494809
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1508494805}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6af2d410bf489d842a543a60d605af5f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  terrains: []
+  splatmapResolution: 256
+  colorMapResolution: 256
+  layerSettings: []
+  autoRepaint: 0
+  terrainListeners: []
+  bounds:
+    m_Center: {x: NaN, y: NaN, z: NaN}
+    m_Extent: {x: NaN, y: NaN, z: NaN}
+  filterShader: {fileID: 4800000, guid: 0f44df78e3d64d9cb2616cac3d84cb77, type: 3}
 --- !u!1 &1522532697
 GameObject:
   m_ObjectHideFlags: 0
