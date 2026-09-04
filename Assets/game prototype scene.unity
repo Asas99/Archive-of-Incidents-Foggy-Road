@@ -720,28 +720,6 @@ Transform:
   - {fileID: 2072172618}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &234706636
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7b5a4738b539472faa518e606162927c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  enabled: 1
-  label: Curvature
-  blendMode: 0
-  opacity: 100
-  passIndex: 2
-  solver: 0
-  minMax: {x: 0.102970235, y: 0.3529702}
-  radius: 8.4
-  minFalloff: 0.103
-  maxFalloff: 0.001
 --- !u!1001 &312401646
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -803,27 +781,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
---- !u!114 &353301952
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0a035df583564519a95ec430b2620ba3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  enabled: 1
-  label: Direction
-  blendMode: 0
-  opacity: 100
-  passIndex: 5
-  xAngle: 42.2
-  yAngle: 159
-  addSunDirection: 0
-  levels: {x: 0.5940597, y: 0.76237595}
 --- !u!1 &383414338
 GameObject:
   m_ObjectHideFlags: 0
@@ -1465,10 +1422,10 @@ MonoBehaviour:
   blendMode: 0
   opacity: 100
   passIndex: 5
-  xAngle: 45
-  yAngle: 0
+  xAngle: 18.5
+  yAngle: 266
   addSunDirection: 0
-  levels: {x: 0.2376238, y: 0.69108903}
+  levels: {x: 0.35049498, y: 1}
 --- !u!114 &1192286812
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1730,10 +1687,10 @@ MonoBehaviour:
   blendMode: 0
   opacity: 100
   passIndex: 5
-  xAngle: 45
-  yAngle: 153
+  xAngle: 31.7
+  yAngle: 83
   addSunDirection: 0
-  levels: {x: 0.43564343, y: 0.65940595}
+  levels: {x: 0.3247525, y: 0.65940595}
 --- !u!1 &1508494805
 GameObject:
   m_ObjectHideFlags: 0
@@ -1846,10 +1803,9 @@ MonoBehaviour:
   colorMapResolution: 256
   layerSettings:
   - enabled: 1
-    layer: {fileID: 8574412962073106934, guid: d23bf86670545b845aa9afda4d560b29, type: 2}
+    layer: {fileID: 8574412962073106934, guid: c24531e9e9476c044ab57779324d527d, type: 2}
     modifierStack:
-    - {fileID: 234706636}
-    - {fileID: 353301952}
+    - {fileID: 1147279444}
   - enabled: 1
     layer: {fileID: 8574412962073106934, guid: 2925b7341451ade41b70c703a7cc2d9e, type: 2}
     modifierStack:
@@ -1858,10 +1814,6 @@ MonoBehaviour:
     layer: {fileID: 8574412962073106934, guid: 2b0e8b716a6c293488912f0f444a497e, type: 2}
     modifierStack:
     - {fileID: 1192286812}
-  - enabled: 1
-    layer: {fileID: 8574412962073106934, guid: c24531e9e9476c044ab57779324d527d, type: 2}
-    modifierStack:
-    - {fileID: 1147279444}
   autoRepaint: 0
   terrainListeners: []
   bounds:
