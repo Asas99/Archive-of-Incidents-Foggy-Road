@@ -1342,7 +1342,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: cacea6ce6c6d3d64990f5c1294fde429, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.57
+      value: 0.3
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: cacea6ce6c6d3d64990f5c1294fde429, type: 3}
       propertyPath: m_LocalPosition.z
@@ -1426,6 +1426,27 @@ Transform:
   - {fileID: 1034401167}
   m_Father: {fileID: 79308607}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1193714429
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a035df583564519a95ec430b2620ba3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  enabled: 1
+  label: Direction
+  blendMode: 0
+  opacity: 100
+  passIndex: 5
+  xAngle: 45
+  yAngle: 0
+  addSunDirection: 0
+  levels: {x: 0.5465348, y: 1}
 --- !u!1 &1293384343
 GameObject:
   m_ObjectHideFlags: 0
@@ -1803,20 +1824,24 @@ MonoBehaviour:
   colorMapResolution: 256
   layerSettings:
   - enabled: 1
+    layer: {fileID: 8574412962073106934, guid: 52fc623bc0183e944b9679149751f76c, type: 2}
+    modifierStack:
+    - {fileID: 1193714429}
+  - enabled: 1
     layer: {fileID: 8574412962073106934, guid: c24531e9e9476c044ab57779324d527d, type: 2}
     modifierStack:
     - {fileID: 1390925605}
   - enabled: 1
-    layer: {fileID: 8574412962073106934, guid: 2b0e8b716a6c293488912f0f444a497e, type: 2}
-    modifierStack:
-    - {fileID: 186440664}
+    layer: {fileID: 8574412962073106934, guid: d23bf86670545b845aa9afda4d560b29, type: 2}
+    modifierStack: []
   - enabled: 1
     layer: {fileID: 8574412962073106934, guid: 2925b7341451ade41b70c703a7cc2d9e, type: 2}
     modifierStack:
     - {fileID: 1403083486}
   - enabled: 1
-    layer: {fileID: 8574412962073106934, guid: d23bf86670545b845aa9afda4d560b29, type: 2}
-    modifierStack: []
+    layer: {fileID: 8574412962073106934, guid: 2b0e8b716a6c293488912f0f444a497e, type: 2}
+    modifierStack:
+    - {fileID: 186440664}
   autoRepaint: 0
   terrainListeners: []
   bounds:
