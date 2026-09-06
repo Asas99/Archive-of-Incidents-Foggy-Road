@@ -147,6 +147,9 @@ Shader "Foggy Road/Wet Asphalt URP PRO"
             #pragma multi_compile _ DIRLIGHTMAP_COMBINED
             #pragma multi_compile_instancing
 
+            // The very large road mesh exhibits camera-relative shadow-atlas artifacts.
+            // Keep direct lighting, but do not sample realtime shadows in this material.
+            #define _RECEIVE_SHADOWS_OFF 1
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
@@ -307,9 +310,9 @@ Shader "Foggy Road/Wet Asphalt URP PRO"
                 float3 viewDirWS = SafeNormalize(GetCameraPositionWS() - IN.positionWS);
                 float3 viewDirTS = float3(dot(viewDirWS, T), dot(viewDirWS, B), dot(viewDirWS, N));
 
-                float dist = distance(GetCameraPositionWS(), IN.positionWS);
-                float pomFade = 1.0 - saturate((dist - _ParallaxFadeStart) / max(_ParallaxFadeEnd - _ParallaxFadeStart, 0.001));
-                float2 uv = ParallaxOcclusionUV(IN.uv0, viewDirTS, pomFade);
+                // Keep the road surface stable while the camera moves. POM on this
+                // long spline mesh crosses UV seams and creates large dark trails.
+                float2 uv = IN.uv0;
 
                 half wear = IN.color.r;
                 half retention = IN.color.g;
