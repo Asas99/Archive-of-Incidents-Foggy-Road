@@ -41,6 +41,9 @@
         },
         {
             "m_Id": "172122f6b2f74d1dbca16b600e877410"
+        },
+        {
+            "m_Id": "2a5e5c0b488847f7b8da701863e0cc26"
         }
     ],
     "m_Keywords": [],
@@ -2339,6 +2342,9 @@
         },
         {
             "m_Id": "3081c1019daf43d089a08edd38632e0d"
+        },
+        {
+            "m_Id": "2a5e5c0b488847f7b8da701863e0cc26"
         }
     ]
 }
@@ -2591,6 +2597,34 @@
     "m_Value": 0.0,
     "m_DefaultValue": 0.0,
     "m_Labels": []
+}
+
+{
+    "m_SGVersion": 1,
+    "m_Type": "UnityEditor.ShaderGraph.Internal.Vector1ShaderProperty",
+    "m_ObjectId": "2a5e5c0b488847f7b8da701863e0cc26",
+    "m_Guid": {
+        "m_GuidSerialized": "eb8ab8ca-d317-4cfd-9f5c-40dc9641bfd6"
+    },
+    "m_Name": "Smoothness",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "Smoothness",
+    "m_DefaultReferenceName": "_Smoothness",
+    "m_OverrideReferenceName": "",
+    "m_GeneratePropertyBlock": true,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_Precision": 0,
+    "overrideHLSLDeclaration": false,
+    "hlslDeclarationOverride": 0,
+    "m_Hidden": false,
+    "m_Value": 0.0,
+    "m_FloatType": 0,
+    "m_RangeValues": {
+        "x": 0.0,
+        "y": 1.0
+    }
 }
 
 {
@@ -6215,10 +6249,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": 580.0,
-            "y": 468.8000183105469,
+            "x": 579.9999389648438,
+            "y": 563.9999389648438,
             "width": 208.0,
-            "height": 277.6000061035156
+            "height": 277.60003662109377
         }
     },
     "m_Slots": [
@@ -8757,10 +8791,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": 1267.1998291015625,
-            "y": 721.5999755859375,
+            "x": 1503.9998779296875,
+            "y": 793.6000366210938,
             "width": 208.0001220703125,
-            "height": 336.0001220703125
+            "height": 335.99993896484377
         }
     },
     "m_Slots": [
