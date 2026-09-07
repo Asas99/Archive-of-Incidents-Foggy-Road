@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-8567511930700050256
+--- !u!114 &-4347309413605808769
 MonoBehaviour:
   m_ObjectHideFlags: 11
   m_CorrespondingSourceObject: {fileID: 0}
@@ -20,8 +20,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: RaindropsMat 1
-  m_Shader: {fileID: -6465566751694194690, guid: 4e999df9f8733a0489315577261c5c86, type: 3}
+  m_Name: RainyPBRMat
+  m_Shader: {fileID: 4800000, guid: 2e4b33d44be080b4e86924fae52aaffd, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -69,8 +69,8 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _Object_Texture:
-        m_Texture: {fileID: 2800000, guid: 8ff9aa0d67ac8734ab813468b3b71ece, type: 2}
+    - _NormalMap:
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
@@ -79,14 +79,6 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _ParallaxMap:
         m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _Raindrop_Texture:
-        m_Texture: {fileID: 2800000, guid: 99d750c88ac05db4cbdb1d294cff3fa9, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _SampleTexture2D_2fcc60f0449644c7b95e2712a3719366_Texture_1_Texture2D:
-        m_Texture: {fileID: 2800000, guid: 99d750c88ac05db4cbdb1d294cff3fa9, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SpecGlossMap:
@@ -119,42 +111,59 @@ Material:
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
-    - _Distortion_Power: 0
-    - _Distortion_Scale: 1
-    - _Distortion_Strength: 1
+    - _DropDarkening: 0
+    - _DropDensity: 34.7
+    - _DropNormalStrength: 2.21
+    - _DropRoundness: 1.5
+    - _DropScale: 30
+    - _DropShadingStrength: 1
+    - _DropSize: 0.2
+    - _DropSpeed: 10
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
+    - _LongTrailAmount: 0.45
     - _Metallic: 0
-    - _Normal_Height: 0.5
+    - _NormalStrength: 1
     - _OcclusionStrength: 1
     - _Parallax: 0.005
-    - _QueueControl: 0
     - _QueueOffset: 0
-    - _Raindrop_speed: 1
+    - _RainAmount: 0.69
+    - _RainNormalStrength: 1.5
     - _ReceiveShadows: 1
-    - _Smoothness: 0.5
+    - _SideDriftAmount: 0.132
+    - _SideDriftFrequency: 1.55
+    - _SideDriftSpeed: 0.87
+    - _Smoothness: 0.346
     - _SmoothnessTextureChannel: 0
-    - _Smoothness_Control: 0.21
     - _SpecularHighlights: 1
-    - _Splotch_Size_Max: 0.3
-    - _Splotch_Size_Min: 0.1
-    - _Splotches_Density: 10.34
-    - _Splotches_Power: 11
-    - _Splotches_spasm: 2
+    - _SplatterAmount: 1
+    - _SplatterDensity: 7
+    - _SplatterLifetime: 0.55
+    - _SplatterNormalStrength: 1
+    - _SplatterRingWidth: 0.025
+    - _SplatterSize: 0.16
+    - _SplatterSpeed: 1.8
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
+    - _TrailLength: 2
+    - _TrailStrength: 1
+    - _TrailWidth: 0.2
+    - _TrailWobble: 0.157
+    - _VerticalScale: 1
+    - _WetDarkening: 0.081
+    - _WetSmoothness: 0.92
+    - _Wetness: 1
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+    - _BaseColor: {r: 1, g: 0, b: 0, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _Tiling: {r: 2, g: 2, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
