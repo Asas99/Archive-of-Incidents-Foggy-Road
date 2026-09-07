@@ -13,6 +13,7 @@ using UnityEngine;
 /// - Rock / büyük shrub / log gibi objeleri GameObject olarak daha seyrek dağıtır.
 /// - Yol mesh'i çok yüksek poly olsa bile bir kez raster road mask + distance field üretir.
 /// - Runtime'da grass/fern binlerce ayrı GameObject olmadığı için çok daha performanslıdır.
+/// - Ağaçları Terrain Tree sistemiyle, yol corridor'una göre gerçekçi tür/yaş/boy/spacing karışımıyla üretir.
 ///
 /// Menü:
 /// Tools > Forest Road > Vegetation Placer PRO
@@ -118,6 +119,65 @@ public class ForestRoadVegetationPlacer : EditorWindow
         [NonSerialized] public bool foldout = true;
     }
 
+    [Serializable]
+    public class TreeItem
+    {
+        public bool enabled = true;
+        public GameObject prefab;
+
+        [Header("Automatic Species Mix")]
+        [Range(1f, 100f)] public float mixWeightPercent = 50f;
+
+        [Header("Roadside Corridor")]
+        [Min(0f)] public float minRoadDistance = 3.0f;
+        [Min(0.1f)] public float maxRoadDistance = 34f;
+
+        [Tooltip("1 = dengeli. 1'den büyük değerler ağacı yolun dibinden uzaklaştırıp corridor dış tarafına doğru yoğunlaştırır.")]
+        [Range(0.3f, 4f)] public float outerRoadBias = 1.45f;
+
+        [Header("Terrain")]
+        [Range(0f, 89f)] public float minSlope = 0f;
+        [Range(0f, 89f)] public float maxSlope = 58f;
+
+        [Header("Automatic Age / Size Variation")]
+        public bool autoAgeVariation = true;
+
+        [Tooltip("Normal yetişkin ağaçların yükseklik scale aralığı.")]
+        public Vector2 matureHeightScale = new Vector2(0.90f, 1.35f);
+
+        [Tooltip("Normal yetişkin ağaçların genişlik scale aralığı.")]
+        public Vector2 matureWidthScale = new Vector2(0.82f, 1.22f);
+
+        [Range(0f, 0.70f)] public float youngTreeChance = 0.18f;
+        public Vector2 youngHeightScale = new Vector2(0.48f, 0.82f);
+        public Vector2 youngWidthScale = new Vector2(0.45f, 0.78f);
+
+        [Tooltip("Height ve width scale'a küçük ek sapma ekler.")]
+        [Range(0f, 0.25f)] public float extraScaleJitter = 0.08f;
+
+        [Header("Natural Distribution")]
+        [Min(0.25f)] public float minSpacing = 3.0f;
+        public bool useClustering = true;
+        [Min(0.1f)] public float clusterSize = 28f;
+        [Range(0f, 1f)] public float clusterStrength = 0.42f;
+        public Vector2 noiseOffset = Vector2.zero;
+
+        [Header("Appearance")]
+        public bool randomRotation = true;
+
+        [Tooltip("Çok hafif parlaklık varyasyonu. Shader destekliyorsa ağacın rengini doğal biçimde kırar.")]
+        [Range(0f, 0.20f)] public float colorVariation = 0.05f;
+
+        [NonSerialized] public bool foldout = true;
+    }
+
+    [Serializable]
+    private class GeneratedTreeRecord
+    {
+        public int prototypeIndex;
+        public Vector3 normalizedPosition;
+    }
+
     private struct RoadTriangle
     {
         public Vector2 a;
@@ -183,11 +243,41 @@ public class ForestRoadVegetationPlacer : EditorWindow
 
     [SerializeField] private List<SpawnItem> items = new List<SpawnItem>();
 
+    [Header("Trees / Forest")]
+    [SerializeField] private List<TreeItem> treeItems = new List<TreeItem>();
+
+    [Tooltip("Ağaçlar yolun bu mesafesinin dışına yerleşmez.")]
+    [SerializeField] private float globalTreeCorridorWidth = 40f;
+
+    [Tooltip("Otomatik ağaç sayısını yol corridor alanından hesaplar.")]
+    [SerializeField] private bool automaticTreeCount = true;
+
+    [Tooltip("1000 m² corridor alanına yaklaşık kaç ağaç düşeceği.")]
+    [SerializeField] private float treesPer1000SquareMeters = 48f;
+
+    [SerializeField] private int manualTreeCount = 3000;
+    [SerializeField] private int maximumGeneratedTrees = 15000;
+    [SerializeField] private int treeAttemptsMultiplier = 28;
+
+    [Tooltip("Önceden bu tool ile üretilen ağaçları yeni Generate Trees öncesinde kaldırır.")]
+    [SerializeField] private bool replacePreviouslyGeneratedTrees = true;
+
+    [Tooltip("Mevcut Terrain ağaçlarını spacing hesabında engel kabul eder.")]
+    [SerializeField] private bool avoidExistingTerrainTrees = true;
+
+    [Tooltip("Tür ağırlıklarını otomatik normalize eder.")]
+    [SerializeField] private bool normalizeTreeMixWeights = true;
+
+    [SerializeField]
+    private List<GeneratedTreeRecord> generatedTreeRecords =
+        new List<GeneratedTreeRecord>();
+
     private Vector2 scroll;
 
     [SerializeField] private bool showSceneSetup = true;
     [SerializeField] private bool showGlobalSettings = true;
     [SerializeField] private bool showVegetationLayers = true;
+    [SerializeField] private bool showTreeLayers = true;
 
     private readonly List<RoadTriangle> roadTriangles = new List<RoadTriangle>();
 
@@ -230,6 +320,12 @@ public class ForestRoadVegetationPlacer : EditorWindow
         if (items == null)
             items = new List<SpawnItem>();
 
+        if (treeItems == null)
+            treeItems = new List<TreeItem>();
+
+        if (generatedTreeRecords == null)
+            generatedTreeRecords = new List<GeneratedTreeRecord>();
+
         UpgradeLegacyItemsToRoadsideOnly();
     }
 
@@ -265,9 +361,8 @@ public class ForestRoadVegetationPlacer : EditorWindow
             titleStyle);
 
         EditorGUILayout.HelpBox(
-            "Yoğun grass / fern Terrain Detail + CoverageMode ile çizilir. " +
-            "Pencere artık tek scroll kullanır; bölümleri açıp kapatabilirsin. " +
-            "Auto Random Size açıkken ot/fern boyları instance bazında farklılaşır.",
+            "Grass / Fern yalnızca yol corridor'unda Terrain Detail olarak; ağaçlar ise performanslı Terrain Tree sistemiyle üretilir. " +
+            "Tree Species ağırlıkları, yaş/boy varyasyonu, spacing, clustering, slope ve yol mesafesi otomatik uygulanır.",
             MessageType.Info);
 
         EditorGUILayout.Space(4);
@@ -394,8 +489,8 @@ public class ForestRoadVegetationPlacer : EditorWindow
             EditorGUI.indentLevel++;
 
             EditorGUILayout.HelpBox(
-                "Grass taban katmanı için EntireTerrainOutsideRoad; Fern için RoadBand iyi başlangıçtır. " +
-                "Birden fazla grass / fern prefabı eklersen doğal karışım çok daha iyi görünür.",
+                "Vegetation yalnızca yol boyunca belirlenen Roadside Corridor içinde üretilir. " +
+                "Birden fazla grass / fern prefabı ekleyip Auto Mix Weight ile doğal oran verebilirsin.",
                 MessageType.None);
 
             for (int i = 0; i < items.Count; i++)
@@ -409,26 +504,79 @@ public class ForestRoadVegetationPlacer : EditorWindow
 
         EditorGUILayout.EndVertical();
 
+        EditorGUILayout.Space(6);
+
+        // -------------------------------------------------------------
+        // TREES / FOREST
+        // -------------------------------------------------------------
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+        showTreeLayers =
+            EditorGUILayout.Foldout(
+                showTreeLayers,
+                "4. TREES / FOREST",
+                true,
+                EditorStyles.foldoutHeader);
+
+        if (showTreeLayers)
+        {
+            EditorGUI.indentLevel++;
+            DrawTreeSection();
+            EditorGUI.indentLevel--;
+        }
+
+        EditorGUILayout.EndVertical();
+
         EditorGUILayout.Space(10);
 
         GUI.backgroundColor = new Color(0.68f, 1f, 0.68f);
 
         if (GUILayout.Button(
             "GENERATE / FILL VEGETATION",
-            GUILayout.Height(46f)))
+            GUILayout.Height(44f)))
         {
             GenerateAll();
+        }
+
+        GUI.backgroundColor = new Color(0.63f, 0.90f, 0.63f);
+
+        if (GUILayout.Button(
+            "GENERATE TREES / BUILD FOREST",
+            GUILayout.Height(48f)))
+        {
+            GenerateTrees();
+        }
+
+        GUI.backgroundColor = new Color(0.78f, 0.94f, 0.78f);
+
+        if (GUILayout.Button(
+            "GENERATE ALL  (VEGETATION + TREES)",
+            GUILayout.Height(38f)))
+        {
+            GenerateAll();
+            GenerateTrees();
         }
 
         GUI.backgroundColor =
             new Color(1f, 0.76f, 0.72f);
 
+        EditorGUILayout.BeginHorizontal();
+
         if (GUILayout.Button(
-            "CLEAR SELECTED VEGETATION",
-            GUILayout.Height(36f)))
+            "CLEAR VEGETATION",
+            GUILayout.Height(34f)))
         {
             ClearSelectedVegetation(true);
         }
+
+        if (GUILayout.Button(
+            "CLEAR GENERATED TREES",
+            GUILayout.Height(34f)))
+        {
+            ClearGeneratedTrees(true);
+        }
+
+        EditorGUILayout.EndHorizontal();
 
         GUI.backgroundColor = Color.white;
 
@@ -925,6 +1073,500 @@ public class ForestRoadVegetationPlacer : EditorWindow
                 "Noise Offset",
                 item.noiseOffset);
         }
+    }
+
+    private void DrawTreeSection()
+    {
+        EditorGUILayout.HelpBox(
+            "Ağaçlar bütün haritaya değil, yalnızca yol boyunca Tree Corridor içinde yerleşir. " +
+            "Terrain Tree sistemi kullanıldığı için binlerce ağaç ayrı GameObject oluşturmaz.",
+            MessageType.None);
+
+        EditorGUILayout.Space(3);
+        EditorGUILayout.LabelField(
+            "Forest Density / Performance",
+            EditorStyles.miniBoldLabel);
+
+        globalTreeCorridorWidth = EditorGUILayout.Slider(
+            "Tree Corridor Width",
+            globalTreeCorridorWidth,
+            8f,
+            80f);
+
+        automaticTreeCount = EditorGUILayout.Toggle(
+            "Automatic Tree Count",
+            automaticTreeCount);
+
+        if (automaticTreeCount)
+        {
+            treesPer1000SquareMeters = EditorGUILayout.Slider(
+                "Trees / 1000 m²",
+                treesPer1000SquareMeters,
+                5f,
+                140f);
+        }
+        else
+        {
+            manualTreeCount = Mathf.Max(
+                0,
+                EditorGUILayout.IntField(
+                    "Manual Tree Count",
+                    manualTreeCount));
+        }
+
+        maximumGeneratedTrees = EditorGUILayout.IntSlider(
+            "Maximum Trees",
+            maximumGeneratedTrees,
+            100,
+            30000);
+
+        treeAttemptsMultiplier = EditorGUILayout.IntSlider(
+            "Placement Attempts",
+            treeAttemptsMultiplier,
+            5,
+            80);
+
+        replacePreviouslyGeneratedTrees = EditorGUILayout.Toggle(
+            "Replace Previous Tool Trees",
+            replacePreviouslyGeneratedTrees);
+
+        avoidExistingTerrainTrees = EditorGUILayout.Toggle(
+            "Avoid Existing Trees",
+            avoidExistingTerrainTrees);
+
+        normalizeTreeMixWeights = EditorGUILayout.Toggle(
+            "Normalize Species Mix",
+            normalizeTreeMixWeights);
+
+        EditorGUILayout.Space(6);
+        EditorGUILayout.LabelField(
+            "Tree Species",
+            EditorStyles.boldLabel);
+
+        for (int i = 0; i < treeItems.Count; i++)
+            DrawTreeItem(i);
+
+        EditorGUILayout.Space(5);
+
+        EditorGUILayout.BeginHorizontal();
+
+        if (GUILayout.Button(
+            "+ TREE SPECIES",
+            GUILayout.Height(28f)))
+        {
+            treeItems.Add(
+                CreateDefaultTreeItem(treeItems.Count));
+        }
+
+        if (GUILayout.Button(
+            "IMPORT TERRAIN TREE PREFABS",
+            GUILayout.Height(28f)))
+        {
+            ImportTerrainTreePrototypes();
+        }
+
+        if (GUILayout.Button(
+            "AUTO REALISTIC TREE MIX",
+            GUILayout.Height(28f)))
+        {
+            ApplyRealisticTreeMix();
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.HelpBox(
+            "İyi başlangıç: Tree Corridor 35-45m, Trees/1000m² = 35-65. " +
+            "Auto Age Variation sayesinde genç / yetişkin ağaçlar farklı height-width scale ile karışır.",
+            MessageType.None);
+    }
+
+    private void DrawTreeItem(int index)
+    {
+        TreeItem item = treeItems[index];
+
+        if (item == null)
+        {
+            item = CreateDefaultTreeItem(index);
+            treeItems[index] = item;
+        }
+
+        EditorGUILayout.BeginVertical("box");
+        EditorGUILayout.BeginHorizontal();
+
+        item.enabled = EditorGUILayout.Toggle(
+            item.enabled,
+            GUILayout.Width(20f));
+
+        string title =
+            item.prefab != null
+                ? item.prefab.name
+                : "Tree Species " + (index + 1);
+
+        item.foldout = EditorGUILayout.Foldout(
+            item.foldout,
+            title,
+            true,
+            EditorStyles.foldoutHeader);
+
+        if (GUILayout.Button("X", GUILayout.Width(28f)))
+        {
+            treeItems.RemoveAt(index);
+            GUIUtility.ExitGUI();
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+        if (item.foldout)
+        {
+            EditorGUI.indentLevel++;
+
+            item.prefab = (GameObject)EditorGUILayout.ObjectField(
+                "Tree Prefab",
+                item.prefab,
+                typeof(GameObject),
+                false);
+
+            item.mixWeightPercent = EditorGUILayout.Slider(
+                "Species Mix Weight (%)",
+                item.mixWeightPercent,
+                1f,
+                100f);
+
+            EditorGUILayout.Space(3);
+            EditorGUILayout.LabelField(
+                "Road Position",
+                EditorStyles.miniBoldLabel);
+
+            item.minRoadDistance = Mathf.Max(
+                0.1f,
+                EditorGUILayout.FloatField(
+                    "Min Road Distance",
+                    item.minRoadDistance));
+
+            item.maxRoadDistance = Mathf.Clamp(
+                EditorGUILayout.FloatField(
+                    "Max Road Distance",
+                    item.maxRoadDistance),
+                item.minRoadDistance + 0.1f,
+                globalTreeCorridorWidth);
+
+            item.outerRoadBias = EditorGUILayout.Slider(
+                "Prefer Outer Forest",
+                item.outerRoadBias,
+                0.3f,
+                4f);
+
+            EditorGUILayout.Space(3);
+            EditorGUILayout.LabelField(
+                "Slope",
+                EditorStyles.miniBoldLabel);
+
+            item.minSlope = EditorGUILayout.Slider(
+                "Min Slope",
+                item.minSlope,
+                0f,
+                89f);
+
+            item.maxSlope = EditorGUILayout.Slider(
+                "Max Slope",
+                item.maxSlope,
+                0f,
+                89f);
+
+            EditorGUILayout.Space(3);
+            EditorGUILayout.LabelField(
+                "Automatic Age / Size",
+                EditorStyles.miniBoldLabel);
+
+            item.autoAgeVariation = EditorGUILayout.Toggle(
+                "Auto Age Variation",
+                item.autoAgeVariation);
+
+            item.matureHeightScale = EditorGUILayout.Vector2Field(
+                "Mature Height Scale",
+                item.matureHeightScale);
+
+            item.matureWidthScale = EditorGUILayout.Vector2Field(
+                "Mature Width Scale",
+                item.matureWidthScale);
+
+            if (item.autoAgeVariation)
+            {
+                item.youngTreeChance = EditorGUILayout.Slider(
+                    "Young Tree Chance",
+                    item.youngTreeChance,
+                    0f,
+                    0.70f);
+
+                item.youngHeightScale = EditorGUILayout.Vector2Field(
+                    "Young Height Scale",
+                    item.youngHeightScale);
+
+                item.youngWidthScale = EditorGUILayout.Vector2Field(
+                    "Young Width Scale",
+                    item.youngWidthScale);
+            }
+
+            item.extraScaleJitter = EditorGUILayout.Slider(
+                "Extra Scale Jitter",
+                item.extraScaleJitter,
+                0f,
+                0.25f);
+
+            EditorGUILayout.Space(3);
+            EditorGUILayout.LabelField(
+                "Natural Distribution",
+                EditorStyles.miniBoldLabel);
+
+            item.minSpacing = Mathf.Max(
+                0.25f,
+                EditorGUILayout.FloatField(
+                    "Min Tree Spacing",
+                    item.minSpacing));
+
+            item.useClustering = EditorGUILayout.Toggle(
+                "Use Forest Clustering",
+                item.useClustering);
+
+            if (item.useClustering)
+            {
+                item.clusterSize = Mathf.Max(
+                    0.1f,
+                    EditorGUILayout.FloatField(
+                        "Cluster Size",
+                        item.clusterSize));
+
+                item.clusterStrength = EditorGUILayout.Slider(
+                    "Cluster Strength",
+                    item.clusterStrength,
+                    0f,
+                    1f);
+
+                item.noiseOffset = EditorGUILayout.Vector2Field(
+                    "Noise Offset",
+                    item.noiseOffset);
+            }
+
+            item.randomRotation = EditorGUILayout.Toggle(
+                "Random Rotation",
+                item.randomRotation);
+
+            item.colorVariation = EditorGUILayout.Slider(
+                "Color Variation",
+                item.colorVariation,
+                0f,
+                0.20f);
+
+            EditorGUI.indentLevel--;
+        }
+
+        EditorGUILayout.EndVertical();
+    }
+
+    private TreeItem CreateDefaultTreeItem(int index)
+    {
+        float weight =
+            index == 0 ? 50f :
+            index == 1 ? 30f :
+            20f;
+
+        return new TreeItem
+        {
+            mixWeightPercent = weight,
+            minRoadDistance = 3.0f + index * 0.8f,
+            maxRoadDistance = Mathf.Min(
+                globalTreeCorridorWidth,
+                34f + index * 2f),
+            outerRoadBias = 1.45f,
+            minSlope = 0f,
+            maxSlope = 58f,
+
+            autoAgeVariation = true,
+            matureHeightScale = new Vector2(0.90f, 1.35f),
+            matureWidthScale = new Vector2(0.82f, 1.22f),
+            youngTreeChance = 0.16f + index * 0.03f,
+            youngHeightScale = new Vector2(0.48f, 0.82f),
+            youngWidthScale = new Vector2(0.45f, 0.78f),
+            extraScaleJitter = 0.08f,
+
+            minSpacing = 3.0f + index * 0.25f,
+            useClustering = true,
+            clusterSize = 26f + index * 6f,
+            clusterStrength = 0.40f + index * 0.04f,
+            noiseOffset = new Vector2(
+                700f + index * 41.7f,
+                900f + index * 27.3f),
+
+            randomRotation = true,
+            colorVariation = 0.045f
+        };
+    }
+
+    private void ImportTerrainTreePrototypes()
+    {
+        if (terrain == null)
+            terrain = Terrain.activeTerrain;
+
+        if (terrain == null ||
+            terrain.terrainData == null)
+        {
+            EditorUtility.DisplayDialog(
+                "Terrain Yok",
+                "Önce Terrain seç.",
+                "Tamam");
+            return;
+        }
+
+        TreePrototype[] prototypes =
+            terrain.terrainData.treePrototypes;
+
+        int added = 0;
+
+        for (int p = 0; p < prototypes.Length; p++)
+        {
+            GameObject prefab =
+                prototypes[p] != null
+                    ? prototypes[p].prefab
+                    : null;
+
+            if (prefab == null)
+                continue;
+
+            bool exists = false;
+
+            for (int i = 0; i < treeItems.Count; i++)
+            {
+                if (treeItems[i] != null &&
+                    treeItems[i].prefab == prefab)
+                {
+                    exists = true;
+                    break;
+                }
+            }
+
+            if (exists)
+                continue;
+
+            TreeItem item =
+                CreateDefaultTreeItem(
+                    treeItems.Count);
+
+            item.prefab = prefab;
+            treeItems.Add(item);
+            added++;
+        }
+
+        ApplyRealisticTreeMix();
+
+        EditorUtility.DisplayDialog(
+            "Tree Prefabs Imported",
+            "Eklenen Tree Species: " + added,
+            "Tamam");
+    }
+
+    private void ApplyRealisticTreeMix()
+    {
+        int activeCount = 0;
+
+        for (int i = 0; i < treeItems.Count; i++)
+        {
+            if (treeItems[i] != null &&
+                treeItems[i].enabled)
+                activeCount++;
+        }
+
+        if (activeCount <= 0)
+            return;
+
+        int activeIndex = 0;
+
+        for (int i = 0; i < treeItems.Count; i++)
+        {
+            TreeItem item = treeItems[i];
+
+            if (item == null ||
+                !item.enabled)
+                continue;
+
+            float weight;
+
+            if (activeCount == 1)
+                weight = 100f;
+            else if (activeIndex == 0)
+                weight = 50f;
+            else if (activeIndex == 1)
+                weight = 30f;
+            else
+                weight = 20f / Mathf.Max(1, activeCount - 2);
+
+            item.mixWeightPercent = weight;
+
+            item.minRoadDistance =
+                2.8f + activeIndex * 0.65f;
+
+            item.maxRoadDistance =
+                Mathf.Min(
+                    globalTreeCorridorWidth,
+                    34f + activeIndex * 2f);
+
+            item.outerRoadBias =
+                1.35f + activeIndex * 0.12f;
+
+            item.minSlope = 0f;
+            item.maxSlope =
+                Mathf.Clamp(
+                    58f + activeIndex * 3f,
+                    0f,
+                    72f);
+
+            item.autoAgeVariation = true;
+
+            item.matureHeightScale =
+                new Vector2(
+                    0.86f + activeIndex * 0.03f,
+                    1.30f + activeIndex * 0.07f);
+
+            item.matureWidthScale =
+                new Vector2(
+                    0.80f + activeIndex * 0.02f,
+                    1.18f + activeIndex * 0.05f);
+
+            item.youngTreeChance =
+                Mathf.Clamp01(
+                    0.15f + activeIndex * 0.04f);
+
+            item.youngHeightScale =
+                new Vector2(0.45f, 0.80f);
+
+            item.youngWidthScale =
+                new Vector2(0.43f, 0.76f);
+
+            item.extraScaleJitter =
+                0.07f + activeIndex * 0.01f;
+
+            item.minSpacing =
+                2.8f + activeIndex * 0.35f;
+
+            item.useClustering = true;
+            item.clusterSize =
+                25f + activeIndex * 7f;
+
+            item.clusterStrength =
+                Mathf.Clamp01(
+                    0.38f + activeIndex * 0.06f);
+
+            item.noiseOffset =
+                new Vector2(
+                    1000f + activeIndex * 53.7f,
+                    1600f + activeIndex * 31.9f);
+
+            item.randomRotation = true;
+            item.colorVariation = 0.045f;
+
+            activeIndex++;
+        }
+
+        Repaint();
     }
 
     private void DrawPresetButtons()
@@ -1945,6 +2587,1012 @@ public class ForestRoadVegetationPlacer : EditorWindow
                 180f);
 
         Repaint();
+    }
+
+    private void GenerateTrees()
+    {
+        if (!EnsureRoadCache())
+            return;
+
+        List<TreeItem> active =
+            new List<TreeItem>();
+
+        for (int i = 0; i < treeItems.Count; i++)
+        {
+            TreeItem item = treeItems[i];
+
+            if (item != null &&
+                item.enabled &&
+                item.prefab != null)
+            {
+                active.Add(item);
+            }
+        }
+
+        if (active.Count == 0)
+        {
+            EditorUtility.DisplayDialog(
+                "Tree Species Yok",
+                "Trees / Forest bölümüne en az bir Tree Prefab ekle.",
+                "Tamam");
+            return;
+        }
+
+        TerrainData td =
+            terrain.terrainData;
+
+        Undo.RegisterCompleteObjectUndo(
+            td,
+            "Generate Roadside Forest");
+
+        if (replacePreviouslyGeneratedTrees)
+            RemovePreviouslyGeneratedTrees(false);
+
+        Dictionary<TreeItem, int> prototypeMap =
+            BuildTreePrototypeMap(
+                td,
+                active);
+
+        List<TreeInstance> allTrees =
+            new List<TreeInstance>(
+                td.treeInstances);
+
+        float minSpacing =
+            GetMinimumTreeSpacing(active);
+
+        float spacingCellSize =
+            Mathf.Max(
+                0.5f,
+                minSpacing);
+
+        Dictionary<Vector2Int, List<Vector2>> spacingGrid =
+            new Dictionary<Vector2Int, List<Vector2>>();
+
+        if (avoidExistingTerrainTrees)
+        {
+            for (int i = 0; i < allTrees.Count; i++)
+            {
+                Vector3 wp =
+                    TreeInstanceToWorld(
+                        allTrees[i]);
+
+                AddTreeSpacingPoint(
+                    spacingGrid,
+                    new Vector2(wp.x, wp.z),
+                    spacingCellSize);
+            }
+        }
+
+        float estimatedArea;
+        float candidateJitterX;
+        float candidateJitterZ;
+
+        List<Vector2> treeCandidatePoints =
+            BuildTreeCandidatePoints(
+                globalTreeCorridorWidth,
+                out estimatedArea,
+                out candidateJitterX,
+                out candidateJitterZ);
+
+        if (treeCandidatePoints.Count == 0)
+        {
+            EditorUtility.DisplayDialog(
+                "Tree Corridor Bulunamadı",
+                "Road cache içinde ağaç yerleştirilecek corridor hücresi bulunamadı.",
+                "Tamam");
+            return;
+        }
+
+        int targetCount =
+            automaticTreeCount
+                ? Mathf.RoundToInt(
+                    estimatedArea *
+                    treesPer1000SquareMeters /
+                    1000f)
+                : manualTreeCount;
+
+        targetCount =
+            Mathf.Clamp(
+                targetCount,
+                0,
+                maximumGeneratedTrees);
+
+        if (targetCount <= 0)
+        {
+            EditorUtility.DisplayDialog(
+                "Ağaç Sayısı 0",
+                "Tree density / corridor ayarlarından hedef ağaç sayısı 0 çıktı.",
+                "Tamam");
+            return;
+        }
+
+        System.Random rng =
+            new System.Random(
+                seed ^ 0x5F3759DF);
+
+        int attempts = 0;
+        int placed = 0;
+        int maxAttempts =
+            Mathf.Max(
+                targetCount *
+                treeAttemptsMultiplier,
+                targetCount + 500);
+
+        try
+        {
+            while (placed < targetCount &&
+                   attempts < maxAttempts)
+            {
+                attempts++;
+
+                if ((attempts & 255) == 0)
+                {
+                    if (EditorUtility.DisplayCancelableProgressBar(
+                        "Roadside Forest",
+                        "Trees " +
+                        placed + " / " + targetCount,
+                        placed /
+                        (float)Mathf.Max(1, targetCount)))
+                    {
+                        break;
+                    }
+                }
+
+                TreeItem item =
+                    PickWeightedTreeItem(
+                        active,
+                        rng);
+
+                if (item == null)
+                    continue;
+
+                Vector2 basePoint =
+                    treeCandidatePoints[
+                        rng.Next(
+                            0,
+                            treeCandidatePoints.Count)];
+
+                float x =
+                    basePoint.x +
+                    Mathf.Lerp(
+                        -candidateJitterX,
+                        candidateJitterX,
+                        (float)rng.NextDouble());
+
+                float z =
+                    basePoint.y +
+                    Mathf.Lerp(
+                        -candidateJitterZ,
+                        candidateJitterZ,
+                        (float)rng.NextDouble());
+
+                Vector2 xz =
+                    new Vector2(x, z);
+
+                if (!IsWorldXZInsideTerrain(xz))
+                    continue;
+
+                float roadDist =
+                    SampleRoadDistanceWorld(xz);
+
+                float minDist =
+                    Mathf.Max(
+                        item.minRoadDistance,
+                        extraRoadClearance + 0.5f);
+
+                float maxDist =
+                    Mathf.Clamp(
+                        item.maxRoadDistance,
+                        minDist + 0.1f,
+                        globalTreeCorridorWidth);
+
+                if (roadDist <= minDist ||
+                    roadDist > maxDist)
+                    continue;
+
+                float slope =
+                    SampleSlopeWorld(xz);
+
+                if (slope < item.minSlope ||
+                    slope > item.maxSlope)
+                    continue;
+
+                // Yolun hemen dibinde daha seyrek,
+                // corridor dış tarafına doğru daha dolu orman.
+                float distance01 =
+                    Mathf.InverseLerp(
+                        minDist,
+                        maxDist,
+                        roadDist);
+
+                float outerAcceptance =
+                    Mathf.Lerp(
+                        0.30f,
+                        1f,
+                        Mathf.Pow(
+                            Mathf.Clamp01(distance01),
+                            item.outerRoadBias));
+
+                if ((float)rng.NextDouble() >
+                    outerAcceptance)
+                    continue;
+
+                if (item.useClustering)
+                {
+                    float cs =
+                        Mathf.Max(
+                            0.1f,
+                            item.clusterSize);
+
+                    float n1 =
+                        Mathf.PerlinNoise(
+                            (xz.x +
+                             item.noiseOffset.x +
+                             seed * 0.017f) / cs,
+                            (xz.y +
+                             item.noiseOffset.y +
+                             seed * 0.029f) / cs);
+
+                    float n2 =
+                        Mathf.PerlinNoise(
+                            (xz.x -
+                             item.noiseOffset.y +
+                             seed * 0.047f) /
+                            (cs * 0.47f),
+                            (xz.y +
+                             item.noiseOffset.x -
+                             seed * 0.019f) /
+                            (cs * 0.47f));
+
+                    float combined =
+                        n1 * 0.72f +
+                        n2 * 0.28f;
+
+                    float clusterAcceptance =
+                        Mathf.Lerp(
+                            1f,
+                            Mathf.Lerp(
+                                0.22f,
+                                1f,
+                                combined),
+                            item.clusterStrength);
+
+                    if ((float)rng.NextDouble() >
+                        clusterAcceptance)
+                        continue;
+                }
+
+                if (IsTreePointTooClose(
+                    spacingGrid,
+                    xz,
+                    item.minSpacing,
+                    spacingCellSize))
+                {
+                    continue;
+                }
+
+                float worldY =
+                    terrain.SampleHeight(
+                        new Vector3(x, 0f, z)) +
+                    terrain.transform.position.y;
+
+                TreeInstance instance =
+                    CreateTreeInstance(
+                        item,
+                        prototypeMap[item],
+                        new Vector3(x, worldY, z),
+                        rng);
+
+                allTrees.Add(instance);
+
+                generatedTreeRecords.Add(
+                    new GeneratedTreeRecord
+                    {
+                        prototypeIndex =
+                            instance.prototypeIndex,
+                        normalizedPosition =
+                            instance.position
+                    });
+
+                AddTreeSpacingPoint(
+                    spacingGrid,
+                    xz,
+                    spacingCellSize);
+
+                placed++;
+            }
+        }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+        }
+
+        td.SetTreeInstances(
+            allTrees.ToArray(),
+            false);
+
+        EditorUtility.SetDirty(td);
+        terrain.Flush();
+
+        Debug.Log(
+            "[ForestRoadVegetation] Trees generated: " +
+            placed +
+            " / " +
+            targetCount +
+            " | Corridor area approx: " +
+            estimatedArea.ToString("N0") +
+            " m²");
+    }
+
+    private Dictionary<TreeItem, int> BuildTreePrototypeMap(
+        TerrainData td,
+        List<TreeItem> active)
+    {
+        List<TreePrototype> prototypes =
+            new List<TreePrototype>(
+                td.treePrototypes);
+
+        Dictionary<TreeItem, int> result =
+            new Dictionary<TreeItem, int>();
+
+        for (int i = 0; i < active.Count; i++)
+        {
+            TreeItem item = active[i];
+
+            int found = -1;
+
+            for (int p = 0; p < prototypes.Count; p++)
+            {
+                if (prototypes[p] != null &&
+                    prototypes[p].prefab ==
+                    item.prefab)
+                {
+                    found = p;
+                    break;
+                }
+            }
+
+            if (found < 0)
+            {
+                TreePrototype prototype =
+                    new TreePrototype();
+
+                prototype.prefab =
+                    item.prefab;
+
+                prototype.bendFactor = 0f;
+
+                prototypes.Add(prototype);
+                found = prototypes.Count - 1;
+            }
+
+            result[item] = found;
+        }
+
+        td.treePrototypes =
+            prototypes.ToArray();
+
+        return result;
+    }
+
+    private TreeItem PickWeightedTreeItem(
+        List<TreeItem> active,
+        System.Random rng)
+    {
+        if (active == null ||
+            active.Count == 0)
+            return null;
+
+        if (!normalizeTreeMixWeights)
+        {
+            int index =
+                rng.Next(0, active.Count);
+
+            return active[index];
+        }
+
+        float total = 0f;
+
+        for (int i = 0; i < active.Count; i++)
+        {
+            total +=
+                Mathf.Max(
+                    0.01f,
+                    active[i].mixWeightPercent);
+        }
+
+        float pick =
+            (float)rng.NextDouble() *
+            total;
+
+        float cumulative = 0f;
+
+        for (int i = 0; i < active.Count; i++)
+        {
+            cumulative +=
+                Mathf.Max(
+                    0.01f,
+                    active[i].mixWeightPercent);
+
+            if (pick <= cumulative)
+                return active[i];
+        }
+
+        return active[active.Count - 1];
+    }
+
+    private TreeInstance CreateTreeInstance(
+        TreeItem item,
+        int prototypeIndex,
+        Vector3 world,
+        System.Random rng)
+    {
+        TerrainData td =
+            terrain.terrainData;
+
+        Vector3 tp =
+            terrain.transform.position;
+
+        float nx =
+            Mathf.Clamp01(
+                (world.x - tp.x) /
+                td.size.x);
+
+        float nz =
+            Mathf.Clamp01(
+                (world.z - tp.z) /
+                td.size.z);
+
+        float ny =
+            Mathf.Clamp01(
+                (world.y - tp.y) /
+                Mathf.Max(
+                    0.001f,
+                    td.size.y));
+
+        bool young =
+            item.autoAgeVariation &&
+            (float)rng.NextDouble() <
+            item.youngTreeChance;
+
+        Vector2 hRange =
+            young
+                ? item.youngHeightScale
+                : item.matureHeightScale;
+
+        Vector2 wRange =
+            young
+                ? item.youngWidthScale
+                : item.matureWidthScale;
+
+        float heightScale =
+            RandomRange(
+                hRange,
+                rng);
+
+        float widthScale =
+            RandomRange(
+                wRange,
+                rng);
+
+        float jitter =
+            item.extraScaleJitter;
+
+        if (jitter > 0f)
+        {
+            heightScale *=
+                Mathf.Lerp(
+                    1f - jitter,
+                    1f + jitter,
+                    (float)rng.NextDouble());
+
+            widthScale *=
+                Mathf.Lerp(
+                    1f - jitter,
+                    1f + jitter,
+                    (float)rng.NextDouble());
+        }
+
+        float rotation =
+            item.randomRotation
+                ? (float)rng.NextDouble() *
+                  Mathf.PI * 2f
+                : 0f;
+
+        float brightness =
+            Mathf.Lerp(
+                1f - item.colorVariation,
+                1f,
+                (float)rng.NextDouble());
+
+        byte colorByte =
+            (byte)Mathf.Clamp(
+                Mathf.RoundToInt(
+                    brightness * 255f),
+                0,
+                255);
+
+        TreeInstance instance =
+            new TreeInstance();
+
+        instance.position =
+            new Vector3(
+                nx,
+                ny,
+                nz);
+
+        instance.prototypeIndex =
+            prototypeIndex;
+
+        instance.widthScale =
+            Mathf.Max(
+                0.05f,
+                widthScale);
+
+        instance.heightScale =
+            Mathf.Max(
+                0.05f,
+                heightScale);
+
+        instance.rotation = rotation;
+
+        instance.color =
+            new Color32(
+                colorByte,
+                colorByte,
+                colorByte,
+                255);
+
+        instance.lightmapColor =
+            new Color32(
+                255,
+                255,
+                255,
+                255);
+
+        return instance;
+    }
+
+    private float RandomRange(
+        Vector2 range,
+        System.Random rng)
+    {
+        float min =
+            Mathf.Min(
+                range.x,
+                range.y);
+
+        float max =
+            Mathf.Max(
+                range.x,
+                range.y);
+
+        return Mathf.Lerp(
+            min,
+            max,
+            (float)rng.NextDouble());
+    }
+
+    private List<Vector2> BuildTreeCandidatePoints(
+        float corridorWidth,
+        out float estimatedArea,
+        out float jitterX,
+        out float jitterZ)
+    {
+        List<Vector2> points =
+            new List<Vector2>();
+
+        int stepX =
+            Mathf.Max(
+                1,
+                analysisWidth / 1024);
+
+        int stepZ =
+            Mathf.Max(
+                1,
+                analysisHeight / 1024);
+
+        float sampleWidth =
+            analysisCellSizeX *
+            stepX;
+
+        float sampleDepth =
+            analysisCellSizeZ *
+            stepZ;
+
+        jitterX =
+            sampleWidth * 0.48f;
+
+        jitterZ =
+            sampleDepth * 0.48f;
+
+        float sampleArea =
+            sampleWidth *
+            sampleDepth;
+
+        double area = 0.0;
+
+        for (int z = 0;
+             z < analysisHeight;
+             z += stepZ)
+        {
+            for (int x = 0;
+                 x < analysisWidth;
+                 x += stepX)
+            {
+                float d =
+                    roadDistance[z, x];
+
+                if (d <= 1.5f ||
+                    d > corridorWidth)
+                    continue;
+
+                points.Add(
+                    AnalysisCellCenterWorld(
+                        x,
+                        z));
+
+                area += sampleArea;
+            }
+        }
+
+        estimatedArea =
+            (float)area;
+
+        return points;
+    }
+
+    private float EstimateTreeCorridorArea(
+        float corridorWidth)
+    {
+        if (!roadDataReady ||
+            roadDistance == null)
+            return 0f;
+
+        int stepX =
+            Mathf.Max(
+                1,
+                analysisWidth / 512);
+
+        int stepZ =
+            Mathf.Max(
+                1,
+                analysisHeight / 512);
+
+        float sampleArea =
+            analysisCellSizeX *
+            analysisCellSizeZ *
+            stepX *
+            stepZ;
+
+        double area = 0.0;
+
+        for (int z = 0;
+             z < analysisHeight;
+             z += stepZ)
+        {
+            for (int x = 0;
+                 x < analysisWidth;
+                 x += stepX)
+            {
+                float d =
+                    roadDistance[z, x];
+
+                if (d > 1.5f &&
+                    d <= corridorWidth)
+                {
+                    area += sampleArea;
+                }
+            }
+        }
+
+        return (float)area;
+    }
+
+    private Rect GetTreeCandidateBounds()
+    {
+        float expand =
+            globalTreeCorridorWidth +
+            3f;
+
+        TerrainData td =
+            terrain.terrainData;
+
+        Vector3 tp =
+            terrain.transform.position;
+
+        float xMin =
+            Mathf.Max(
+                tp.x,
+                roadWorldBounds.xMin - expand);
+
+        float xMax =
+            Mathf.Min(
+                tp.x + td.size.x,
+                roadWorldBounds.xMax + expand);
+
+        float zMin =
+            Mathf.Max(
+                tp.z,
+                roadWorldBounds.yMin - expand);
+
+        float zMax =
+            Mathf.Min(
+                tp.z + td.size.z,
+                roadWorldBounds.yMax + expand);
+
+        return Rect.MinMaxRect(
+            xMin,
+            zMin,
+            xMax,
+            zMax);
+    }
+
+    private bool IsWorldXZInsideTerrain(
+        Vector2 p)
+    {
+        TerrainData td =
+            terrain.terrainData;
+
+        Vector3 tp =
+            terrain.transform.position;
+
+        return
+            p.x >= tp.x &&
+            p.x <= tp.x + td.size.x &&
+            p.y >= tp.z &&
+            p.y <= tp.z + td.size.z;
+    }
+
+    private float GetMinimumTreeSpacing(
+        List<TreeItem> active)
+    {
+        float min = float.MaxValue;
+
+        for (int i = 0; i < active.Count; i++)
+        {
+            min =
+                Mathf.Min(
+                    min,
+                    Mathf.Max(
+                        0.25f,
+                        active[i].minSpacing));
+        }
+
+        return
+            min == float.MaxValue
+                ? 3f
+                : min;
+    }
+
+    private void AddTreeSpacingPoint(
+        Dictionary<Vector2Int, List<Vector2>> grid,
+        Vector2 p,
+        float cellSize)
+    {
+        Vector2Int key =
+            TreeSpacingCell(
+                p,
+                cellSize);
+
+        List<Vector2> list;
+
+        if (!grid.TryGetValue(
+                key,
+                out list))
+        {
+            list =
+                new List<Vector2>();
+
+            grid.Add(
+                key,
+                list);
+        }
+
+        list.Add(p);
+    }
+
+    private bool IsTreePointTooClose(
+        Dictionary<Vector2Int, List<Vector2>> grid,
+        Vector2 p,
+        float spacing,
+        float cellSize)
+    {
+        float minDist =
+            Mathf.Max(
+                0.25f,
+                spacing);
+
+        int radius =
+            Mathf.Max(
+                1,
+                Mathf.CeilToInt(
+                    minDist /
+                    cellSize));
+
+        Vector2Int center =
+            TreeSpacingCell(
+                p,
+                cellSize);
+
+        float sq =
+            minDist * minDist;
+
+        for (int x = center.x - radius;
+             x <= center.x + radius;
+             x++)
+        {
+            for (int z = center.y - radius;
+                 z <= center.y + radius;
+                 z++)
+            {
+                List<Vector2> list;
+
+                if (!grid.TryGetValue(
+                        new Vector2Int(x, z),
+                        out list))
+                    continue;
+
+                for (int i = 0;
+                     i < list.Count;
+                     i++)
+                {
+                    if ((list[i] - p).sqrMagnitude <
+                        sq)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private Vector2Int TreeSpacingCell(
+        Vector2 p,
+        float cellSize)
+    {
+        return new Vector2Int(
+            Mathf.FloorToInt(
+                p.x / cellSize),
+            Mathf.FloorToInt(
+                p.y / cellSize));
+    }
+
+    private Vector3 TreeInstanceToWorld(
+        TreeInstance tree)
+    {
+        TerrainData td =
+            terrain.terrainData;
+
+        Vector3 tp =
+            terrain.transform.position;
+
+        return new Vector3(
+            tp.x +
+            tree.position.x *
+            td.size.x,
+
+            tp.y +
+            tree.position.y *
+            td.size.y,
+
+            tp.z +
+            tree.position.z *
+            td.size.z);
+    }
+
+    private string TreeRecordKey(
+        int prototypeIndex,
+        Vector3 normalizedPosition)
+    {
+        int x =
+            Mathf.RoundToInt(
+                normalizedPosition.x *
+                100000f);
+
+        int y =
+            Mathf.RoundToInt(
+                normalizedPosition.y *
+                100000f);
+
+        int z =
+            Mathf.RoundToInt(
+                normalizedPosition.z *
+                100000f);
+
+        return
+            prototypeIndex +
+            ":" + x +
+            ":" + y +
+            ":" + z;
+    }
+
+    private void RemovePreviouslyGeneratedTrees(
+        bool ask)
+    {
+        if (terrain == null)
+            terrain = Terrain.activeTerrain;
+
+        if (terrain == null ||
+            terrain.terrainData == null)
+            return;
+
+        if (generatedTreeRecords == null ||
+            generatedTreeRecords.Count == 0)
+            return;
+
+        if (ask)
+        {
+            bool yes =
+                EditorUtility.DisplayDialog(
+                    "Generated Trees Sil",
+                    "Bu toolun son ürettiği ağaçlar Terrain'den silinsin mi?",
+                    "Evet",
+                    "Hayır");
+
+            if (!yes)
+                return;
+        }
+
+        TerrainData td =
+            terrain.terrainData;
+
+        Undo.RegisterCompleteObjectUndo(
+            td,
+            "Remove Generated Road Trees");
+
+        HashSet<string> generatedKeys =
+            new HashSet<string>();
+
+        for (int i = 0;
+             i < generatedTreeRecords.Count;
+             i++)
+        {
+            GeneratedTreeRecord r =
+                generatedTreeRecords[i];
+
+            generatedKeys.Add(
+                TreeRecordKey(
+                    r.prototypeIndex,
+                    r.normalizedPosition));
+        }
+
+        TreeInstance[] existing =
+            td.treeInstances;
+
+        List<TreeInstance> keep =
+            new List<TreeInstance>(
+                existing.Length);
+
+        for (int i = 0;
+             i < existing.Length;
+             i++)
+        {
+            string key =
+                TreeRecordKey(
+                    existing[i].prototypeIndex,
+                    existing[i].position);
+
+            if (!generatedKeys.Contains(key))
+                keep.Add(existing[i]);
+        }
+
+        td.SetTreeInstances(
+            keep.ToArray(),
+            false);
+
+        generatedTreeRecords.Clear();
+
+        EditorUtility.SetDirty(td);
+        terrain.Flush();
+    }
+
+    private void ClearGeneratedTrees(
+        bool ask)
+    {
+        RemovePreviouslyGeneratedTrees(ask);
     }
 
     private void GenerateAll()
