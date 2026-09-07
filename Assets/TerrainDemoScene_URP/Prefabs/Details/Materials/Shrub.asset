@@ -364,7 +364,7 @@ Material:
     - Distance_Fade_End: 100
     - Distance_Fade_Start: 50
     - Vector1_593c5cea6c4a42e993ed03ced4685732: 1
-    - Vector1_8651797e3e304e108dbd25f9d5a426ba: 0.5
+    - Vector1_8651797e3e304e108dbd25f9d5a426ba: 0.661
     - Vector1_a5b8b09028ce49a39f4d090894c89e22: 0.5
     - Vector1_a6983181c8dc4691ba6a28a34c4223a6: 2
     - Wind_Blast: 0.05
@@ -443,6 +443,7 @@ Material:
     - _DoubleSidedNormalMode: 1
     - _Drag: 1
     - _DstBlend: 0
+    - _DstBlendAlpha: 0
     - _ENVIRONMENTREFLECTIONS_OFF: 1
     - _EmissiveColorMode: 1
     - _EmissiveExposureWeight: 1
@@ -531,6 +532,7 @@ Material:
     - _SpecularHighlights: 1
     - _SpecularOcclusionMode: 0
     - _SrcBlend: 1
+    - _SrcBlendAlpha: 1
     - _StencilRef: 0
     - _StencilRefDepth: 0
     - _StencilRefDistortionVec: 4
