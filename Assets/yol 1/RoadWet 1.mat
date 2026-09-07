@@ -127,8 +127,8 @@ Material:
     - _DampFilm: 0.192
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
-    - _DetailNormalScale: 0.75
-    - _DetailNormalTiling: 0.28
+    - _DetailNormalScale: 0.46
+    - _DetailNormalTiling: 1.16
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
@@ -136,7 +136,7 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _GrainScale: 5.9
+    - _GrainScale: 1
     - _GrainStrength: 0
     - _HeightCenter: 0.5
     - _HeightStrength: 0
@@ -149,7 +149,7 @@ Material:
     - _ParallaxFadeStart: 25
     - _ParallaxMaxSteps: 24
     - _ParallaxMinSteps: 8
-    - _ProceduralGrain: 0.458
+    - _ProceduralGrain: 0.09
     - _PuddleCoverage: 0.625
     - _PuddleEdge: 0.355
     - _PuddleFromHeight: 0.75
