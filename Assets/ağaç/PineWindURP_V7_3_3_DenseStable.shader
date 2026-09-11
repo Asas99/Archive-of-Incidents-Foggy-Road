@@ -60,6 +60,10 @@ Shader "PineTree/URP Dense Stable Wind V8_1 Clean"
         _LeafFlutterSpeed("Leaf Flutter Speed", Range(0,30)) = 9.0
         _LeafFlutterVertical("Vertical Flutter", Range(0,1)) = 0.12
         _LeafWindResponse("Leaf Wind Response", Range(0,2)) = 1.10
+
+        [Header(Geometry Wind Mask)]
+        _TreeHeight("Tree Mesh Height", Range(2,60)) = 24
+        _TrunkLockHeight("Locked Trunk Base", Range(0,3)) = 0.65
     }
 
     SubShader
@@ -124,23 +128,40 @@ Shader "PineTree/URP Dense Stable Wind V8_1 Clean"
             float _LeafFlutterSpeed;
             float _LeafFlutterVertical;
             float _LeafWindResponse;
+            float _TreeHeight;
+            float _TrunkLockHeight;
         CBUFFER_END
 
-        float3 ApplyPineWind(float3 pWS, float4 color)
+        float4 _WeatherWindVector;
+        float4 _WeatherDynamics;
+
+        float3 ApplyPineWind(float3 pOS, float4 color)
         {
-            float swayW = saturate(color.r);
+            float3 pWS = TransformObjectToWorld(pOS);
+            // Height masking guarantees rooted trunks even on FBX that have no painted
+            // vertex colors. Painted red weights can still add authored flexibility.
+            float heightWeight = smoothstep(_TrunkLockHeight, max(_TreeHeight, _TrunkLockHeight + 0.01), pOS.y);
+            float swayW = saturate(max(heightWeight, color.r * heightWeight));
             float branchW = saturate(color.g);
             float phase01 = saturate(color.b);
             float leafMask = saturate(color.a) * saturate(_FoliageMode);
 
-            float2 windDir = float2(_WindDirection.x, _WindDirection.z);
+            float weatherEnabled = step(0.0001, dot(_WeatherWindVector.xz, _WeatherWindVector.xz));
+            float2 windDir = lerp(_WindDirection.xz, _WeatherWindVector.xz, weatherEnabled);
             float windLen = max(length(windDir), 1e-4);
             windDir /= windLen;
             float2 windSide = float2(-windDir.y, windDir.x);
 
             float3 treeOriginWS = TransformObjectToWorld(float3(0,0,0));
             float treePhase = treeOriginWS.x * 0.071 + treeOriginWS.z * 0.053;
-            float t = _Time.y * _WindSpeed;
+            // Animation time must ALWAYS come from _Time.y. _WeatherDynamics.z is written
+            // by DynamicWeatherSystem; if that component is missing, disabled or simply not
+            // ticking in play mode, the global keeps its last editor value and the whole
+            // canopy freezes. Weather still drives direction/strength/gust below.
+            float weatherTime = _Time.y;
+            float liveStrength = lerp(1.0, 0.70 + _WeatherDynamics.x, weatherEnabled);
+            float liveGust = lerp(0.0, _WeatherDynamics.y, weatherEnabled);
+            float t = weatherTime * _WindSpeed;
 
             float bodyPhase = t + treePhase;
             float bodyWave =
@@ -152,9 +173,10 @@ Shader "PineTree/URP Dense Stable Wind V8_1 Clean"
             float gust01 = sin(gustPhase) * 0.5 + 0.5;
             gust01 = gust01 * gust01;
             gust01 *= 0.68 + 0.32 * (sin(gustPhase * 0.43 + 1.15) * 0.5 + 0.5);
+            gust01 = saturate(lerp(gust01, liveGust, weatherEnabled));
 
             float swayCurve = pow(swayW, 1.50);
-            float bodyAmount = bodyWave * _WindStrength + gust01 * _GustStrength;
+            float bodyAmount = bodyWave * _WindStrength * liveStrength + gust01 * _GustStrength;
             pWS.xz += windDir * (bodyAmount * swayCurve);
 
             float branchPhase = t * _BranchSpeed + phase01 * 6.28318530718 + treePhase * 1.9;
@@ -278,7 +300,7 @@ Shader "PineTree/URP Dense Stable Wind V8_1 Clean"
                 float tangentSign = IN.tangentOS.w * GetOddNegativeScale();
                 float3 bWS = cross(nWS, tWS) * tangentSign;
 
-                pWS = ApplyPineWind(pWS, IN.color);
+                pWS = ApplyPineWind(IN.positionOS.xyz, IN.color);
 
                 OUT.positionWS = pWS;
                 OUT.positionHCS = TransformWorldToHClip(pWS);
@@ -410,7 +432,7 @@ Shader "PineTree/URP Dense Stable Wind V8_1 Clean"
                 UNITY_SETUP_INSTANCE_ID(IN);
                 UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
                 float3 pWS = TransformObjectToWorld(IN.positionOS.xyz);
-                pWS = ApplyPineWind(pWS, IN.color);
+                pWS = ApplyPineWind(IN.positionOS.xyz, IN.color);
                 OUT.positionHCS = TransformWorldToHClip(pWS);
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 return OUT;
@@ -461,7 +483,7 @@ Shader "PineTree/URP Dense Stable Wind V8_1 Clean"
                 UNITY_SETUP_INSTANCE_ID(IN);
                 UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
                 float3 pWS = TransformObjectToWorld(IN.positionOS.xyz);
-                pWS = ApplyPineWind(pWS, IN.color);
+                pWS = ApplyPineWind(IN.positionOS.xyz, IN.color);
                 OUT.positionHCS = TransformWorldToHClip(pWS);
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 return OUT;

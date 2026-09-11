@@ -319,6 +319,23 @@ Shader "Foggy Road/Wet Asphalt URP PRO"
                 half macro = IN.color.b;
 
                 half3 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv).rgb * _BaseColor.rgb;
+
+                // The source albedo contains very bright painted stripes at U=0/1.
+                // In this dark wet scene those stripes read as glowing mesh seams.
+                // Detect only bright pixels inside the narrow outer UV bands, keep a
+                // subdued road-edge marking, and leave the centre lines untouched.
+                half edgeUvDistance = min(frac(uv.x), 1.0h - frac(uv.x));
+                half outerUvBand = 1.0h - smoothstep(0.015h, 0.065h, edgeUvDistance);
+                half albedoBrightness = dot(albedo, half3(0.2126h, 0.7152h, 0.0722h));
+                half edgePaintMask = outerUvBand * smoothstep(0.20h, 0.48h, albedoBrightness);
+                albedo *= lerp(1.0h, 0.06h, edgePaintMask);
+
+                // The imported FBX also has a narrow bevel/side rim. Suppress its
+                // ambient response so it cannot silhouette itself against the dark
+                // terrain, regardless of the road texture or reflection probe.
+                half topGeometryMask = smoothstep(0.55h, 0.88h, saturate(N.y));
+                half sideGeometryMask = 1.0h - topGeometryMask;
+                albedo *= lerp(0.08h, 1.0h, topGeometryMask);
                 albedo *= lerp(1.0h, max(macro, 0.35h), _MacroStrength);
                 albedo *= lerp(1.0h, 1.0h - _WearDarkening, wear);
 
@@ -365,6 +382,8 @@ Shader "Foggy Road/Wet Asphalt URP PRO"
                 normalTS = normalize(normalTS);
 
                 roughness = saturate(roughness + (h0 - 0.5h) * _RoughnessVariation * (1.0h - wetArea));
+                roughness = max(roughness, edgePaintMask * 0.92h);
+                roughness = max(roughness, sideGeometryMask * 0.96h);
                 half smoothness = saturate(1.0h - roughness);
                 smoothness = saturate(smoothness + wetArea * _WaterFilm * 0.22h);
 
@@ -396,9 +415,18 @@ Shader "Foggy Road/Wet Asphalt URP PRO"
 
                 half4 color = UniversalFragmentPBR(input, surface);
 
-                // Subtle grazing-angle wet reflection lift. PBR still does the real reflection probe work.
+                // PBR ambient/specular can still light a nearly vertical bevel even
+                // with dark albedo. Fade the final rim response as the last safeguard.
+                color.rgb *= lerp(0.10h, 1.0h, topGeometryMask);
+
+                // Keep the artistic wet reflection on the road surface only. The
+                // bevel/side normals previously received the full grazing Fresnel
+                // term, which drew a bright outline around both road edges.
                 half fresnel = pow(1.0h - saturate(dot(normalWS, viewDirWS)), 5.0h);
-                color.rgb += _ReflectionTint.rgb * fresnel * wetArea * _FresnelBoost * _WaterFilm;
+                half topSurfaceMask = topGeometryMask;
+                color.rgb += _ReflectionTint.rgb * fresnel * wetArea *
+                             _FresnelBoost * _WaterFilm * topSurfaceMask *
+                             (1.0h - edgePaintMask);
                 color.rgb = MixFog(color.rgb, IN.fogFactor);
                 return color;
             }

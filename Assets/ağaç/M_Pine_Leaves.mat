@@ -34,7 +34,7 @@ Material:
   - _USEPARALLAX_ON
   - _USEROUGHNESSMAP_ON
   m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
@@ -124,12 +124,12 @@ Material:
     - _AlphaToMask: 0
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
-    - _BranchFlex: 0.04
+    - _BranchFlex: 0.09
     - _BranchSpeed: 1.45
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _Cull: 0
+    - _Cull: 2
     - _Cutoff: 0.632
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
@@ -144,10 +144,10 @@ Material:
     - _GlossyReflections: 0
     - _GustScale: 0.05
     - _GustSpeed: 0.28
-    - _GustStrength: 0.18
+    - _GustStrength: 0.38
     - _HeightInvert: 0
-    - _LeafFlutter: 0.006
-    - _LeafFlutterSpeed: 9
+    - _LeafFlutter: 0.014
+    - _LeafFlutterSpeed: 11
     - _LeafFlutterVertical: 0.12
     - _LeafWindResponse: 1.1
     - _Metallic: 0
@@ -166,13 +166,15 @@ Material:
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
+    - _TreeHeight: 24
+    - _TrunkLockHeight: 0.65
     - _UseAOMap: 1
     - _UseDetailNormal: 1
     - _UseNormalMap: 1
     - _UseParallax: 1
     - _UseRoughnessMap: 1
-    - _WindSpeed: 0.85
-    - _WindStrength: 0.16
+    - _WindSpeed: 1.1
+    - _WindStrength: 0.34
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:

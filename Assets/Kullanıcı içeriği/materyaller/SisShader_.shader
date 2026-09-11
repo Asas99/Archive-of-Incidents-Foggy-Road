@@ -11,13 +11,13 @@ Shader "Custom/RealisticVolumetricFog"
         _GroundThickness("Ground Bank Thickness", Range(0.25, 15.0)) = 3.2
         _HeightFalloff("Atmosphere Height Falloff", Range(0.001, 1.0)) = 0.085
         [IntRange]_Steps("Raymarch Steps", Range(8, 64)) = 48
-        _WeatherScale("Weather Scale", Float) = 0.0045
-        _NoiseScale("Detail Noise Scale", Float) = 0.032
+        _WeatherScale("Weather Scale", Float) = 0.0024
+        _NoiseScale("Detail Noise Scale", Float) = 0.012
         _NoiseStrength("Detail Strength", Range(0, 1)) = 0.58
         _Coverage("Bank Coverage", Range(0, 1)) = 0.58
         _Erosion("Bank Erosion", Range(0, 1)) = 0.52
         _WindDirection("Wind Direction", Vector) = (1, 0, 0.35, 0)
-        _WindSpeed("Wind Speed", Float) = 0.08
+        _WindSpeed("Fog Advection Speed", Float) = 0.06
         _SunScattering("Sun Scattering", Range(0, 4)) = 1.05
         _Anisotropy("Anisotropy", Range(-0.8, 0.8)) = 0.48
         _AmbientStrength("Ambient Strength", Range(0, 2)) = 0.48
@@ -70,6 +70,11 @@ Shader "Custom/RealisticVolumetricFog"
                 float _MaxOpacity;
             CBUFFER_END
 
+            // Driven by DynamicWeatherSystem so fog, foliage and sky share one wind field.
+            float4 _WeatherWindVector; // xyz direction, w instantaneous strength
+            float4 _WeatherDynamics;   // x wind, y gust, z time, w turbulence
+            float4 _WeatherFogSky;     // x fog flow, y sky flow, z gust frequency
+
             // Continuous 3D noise prevents the vertical columns caused by a single XZ lookup.
             float Hash31(float3 p)
             {
@@ -100,22 +105,37 @@ Shader "Custom/RealisticVolumetricFog"
             }
 
             // x: soft detail modulation, y: coherent low-lying bank mask.
+            // The macro fields deliberately move only a few metres over many minutes.
+            // This keeps a bank readable as a place in the landscape rather than a
+            // fast, screen-sized effect.
             float2 SampleFogStructure(float3 worldPos)
             {
-                float3 wind = float3(_WindDirection.x, 0.12, _WindDirection.z) *
-                              (_Time.y * _WindSpeed);
-                float weather = ValueNoise3D(worldPos * max(_WeatherScale, 0.0001) +
-                                             wind * 0.28);
-                float detail = ValueNoise3D(worldPos.zyx * max(_NoiseScale, 0.0001) +
-                                            wind.zyx + 17.31);
+                float weatherEnabled = step(0.0001, dot(_WeatherWindVector.xz, _WeatherWindVector.xz));
+                float2 windDirection = normalize(lerp(_WindDirection.xz,
+                                                      _WeatherWindVector.xz,
+                                                      weatherEnabled) + 0.0001);
+                // Same rule as the pine wind shader: drift time is always _Time.y so the
+                // banks keep moving even when the weather globals are stale.
+                float weatherTime = _Time.y;
+                float flowSpeed = lerp(_WindSpeed, _WeatherFogSky.x, weatherEnabled);
+                float3 drift = float3(windDirection.x, 0.0, windDirection.y) *
+                               (weatherTime * flowSpeed);
 
-                float threshold = lerp(0.68, 0.30, _Coverage);
-                float banks = smoothstep(threshold - 0.16, threshold + 0.16, weather);
-                float erodedBanks = banks * smoothstep(0.16, 0.82, detail);
-                banks = lerp(banks, erodedBanks, _Erosion);
+                // Broad, overlapping fields leave clear corridors between banks.
+                float weather = ValueNoise3D((worldPos + drift) * max(_WeatherScale, 0.0001));
+                float weatherSecondary = ValueNoise3D((worldPos * 1.73 - drift * 0.37 + 91.7) *
+                                                       max(_WeatherScale, 0.0001));
+                float detail = ValueNoise3D((worldPos + drift * 0.18 + 37.1) *
+                                            max(_NoiseScale, 0.0001));
 
-                float detailModulation = lerp(1.0, lerp(0.68, 1.32, detail),
-                                              _NoiseStrength);
+                float broadShape = lerp(weather, weatherSecondary, 0.42);
+                float threshold = lerp(0.72, 0.43, _Coverage);
+                float banks = smoothstep(threshold - 0.13, threshold + 0.13, broadShape);
+                float erosion = smoothstep(0.20, 0.80, detail);
+                banks *= lerp(1.0, erosion, _Erosion * 0.55);
+
+                float detailModulation = lerp(1.0, lerp(0.80, 1.16, detail),
+                                              _NoiseStrength * 0.55);
                 return float2(detailModulation, banks);
             }
 
@@ -129,7 +149,10 @@ Shader "Custom/RealisticVolumetricFog"
                                              distanceFromCamera);
                 float2 structure = SampleFogStructure(worldPos);
 
-                float atmosphere = _Density * atmosphereHeight * structure.x;
+                // A thin base haze keeps air perspective, while the denser bank term
+                // remains spatially broken up. This avoids a uniform white wall.
+                float atmosphere = _Density * atmosphereHeight *
+                                   lerp(0.42, 1.0, structure.x);
                 float groundBanks = _GroundDensity * groundHeight * structure.y;
                 return max((atmosphere + groundBanks) * startFade, 0.0);
             }
@@ -229,8 +252,7 @@ Shader "Custom/RealisticVolumetricFog"
                     transmittance = 1.0 - _MaxOpacity;
                 }
 
-                float3 finalColor = sceneColor.rgb * transmittance + accumulatedFog;
-                return float4(finalColor, sceneColor.a);
+                return float4(sceneColor.rgb * transmittance + accumulatedFog, sceneColor.a);
             }
             ENDHLSL
         }
