@@ -124,15 +124,15 @@ Material:
     - _CrackScale: 0.5
     - _Cull: 2
     - _Cutoff: 0.5
-    - _DampFilm: 0.192
+    - _DampFilm: 0.55
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
-    - _DetailNormalScale: 0.46
-    - _DetailNormalTiling: 1.16
+    - _DetailNormalScale: 0.17
+    - _DetailNormalTiling: -1.4
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
-    - _FresnelBoost: 0.617
+    - _FresnelBoost: 0.19
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
@@ -140,39 +140,39 @@ Material:
     - _GrainStrength: 0
     - _HeightCenter: 0.5
     - _HeightStrength: 0
-    - _MacroStrength: 1
+    - _MacroStrength: 0.04
     - _Metallic: 0
-    - _NormalScale: 1
+    - _NormalScale: 0.18
     - _OcclusionStrength: 1
     - _Parallax: 0
     - _ParallaxFadeEnd: 70
     - _ParallaxFadeStart: 25
     - _ParallaxMaxSteps: 24
     - _ParallaxMinSteps: 8
-    - _ProceduralGrain: 0.09
-    - _PuddleCoverage: 0.625
-    - _PuddleEdge: 0.355
-    - _PuddleFromHeight: 0.75
-    - _PuddleNoiseScale: 0.12
-    - _PuddleNormalFlatten: 0.92
-    - _PuddleRandomness: 0.85
-    - _PuddleRoughness: 0.055
+    - _ProceduralGrain: 0.032
+    - _PuddleCoverage: 0
+    - _PuddleEdge: 0.5
+    - _PuddleFromHeight: 0.3
+    - _PuddleNoiseScale: 0.25
+    - _PuddleNormalFlatten: 0.23
+    - _PuddleRandomness: 0.35
+    - _PuddleRoughness: 0.12
     - _QueueOffset: 0
-    - _ReceiveShadows: 0
-    - _Roughness: 1
-    - _RoughnessMapStrength: 0.023
-    - _RoughnessVariation: 0.167
+    - _ReceiveShadows: 1
+    - _Roughness: 0.535
+    - _RoughnessMapStrength: 0.17
+    - _RoughnessVariation: 0.253
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
-    - _WaterFilm: 0.358
-    - _WearDarkening: 0.044
-    - _WetDarkening: 0.714
-    - _WetNormalFlatten: 0.7
-    - _WetRoughness: 0.228
+    - _WaterFilm: 0.48
+    - _WearDarkening: 0.9
+    - _WetDarkening: 0.19
+    - _WetNormalFlatten: 0.85
+    - _WetRoughness: 0.345
     - _Wetness: 0
     - _WorkflowMode: 1
     - _ZWrite: 1
@@ -180,7 +180,7 @@ Material:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _ReflectionTint: {r: 0.72, g: 0.82, b: 0.95, a: 1}
+    - _ReflectionTint: {r: 0.6075471, g: 0.6075471, b: 0.6075471, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _WetTint: {r: 0.82, g: 0.9, b: 1, a: 1}
   m_BuildTextureStacks: []
