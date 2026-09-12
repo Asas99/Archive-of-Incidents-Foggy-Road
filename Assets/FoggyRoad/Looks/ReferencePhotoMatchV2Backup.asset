@@ -1,0 +1,99 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2978b5c26758d8d46af060dfb4c6e010, type: 3}
+  m_Name: ReferencePhotoMatchV2Backup
+  m_EditorClassIdentifier: Assembly-CSharp-Editor::ReferencePhotoMatchV2Backup
+  hasBackup: 1
+  fog: 0
+  fogMode: 3
+  fogColor: {r: 0.19, g: 0.27, b: 0.36, a: 1}
+  fogDensity: 0.00065
+  ambientMode: 3
+  ambientLight: {r: 0.085, g: 0.095, b: 0.11, a: 1}
+  ambientSkyColor: {r: 0.085, g: 0.095, b: 0.11, a: 1}
+  ambientEquatorColor: {r: 0.036, g: 0.04, b: 0.05, a: 1}
+  ambientGroundColor: {r: 0.014, g: 0.016, b: 0.022, a: 1}
+  ambientIntensity: 1
+  reflectionIntensity: 0.5
+  defaultReflectionMode: 0
+  skybox: {fileID: 2100000, guid: 2496efbf599d1aa4093ffee4339a6f7b, type: 2}
+  sun: {fileID: 0}
+  volume: {fileID: 0}
+  volumeEnabled: 1
+  volumeGlobal: 1
+  volumePriority: 70
+  volumeWeight: 1
+  volumeProfile: {fileID: 11400000, guid: 3e11162a60c2cd44d9f3430ea8eecc46, type: 2}
+  camera: {fileID: 0}
+  cameraSnapshot:
+    position: {x: 446.4818, y: 5.1765018, z: -98.62953}
+    rotation: {x: 0.0018879747, y: -0.24058561, z: 0.00046796555, w: 0.97062606}
+    fieldOfView: 54
+    nearClipPlane: 0.03
+    farClipPlane: 520
+    clearFlags: 1
+    allowHDR: 1
+    allowMSAA: 1
+    hadUrpData: 1
+    renderPostProcessing: 1
+  lights:
+  - path: Rainy Overcast Key
+    enabled: 1
+    position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0.3178509, y: -0.20464769, z: 0.07046585, w: 0.9231061}
+    color: {r: 0.52, g: 0.59, b: 0.7, a: 1}
+    intensity: 0.95
+    shadows: 2
+    shadowStrength: 0.6
+  - path: __FoggyRoadReferenceLook/ColdSkyFill
+    enabled: 1
+    position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0.17830163, y: 0.82108927, z: -0.3655725, w: 0.400472}
+    color: {r: 0.42, g: 0.49, b: 0.61, a: 1}
+    intensity: 0.32
+    shadows: 2
+    shadowStrength: 0.6
+  - path: __FoggyRoadReferenceLook/SoftFrontFill
+    enabled: 1
+    position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0.3243293, y: -0.08240737, z: 0.028375134, w: 0.94192064}
+    color: {r: 0.42, g: 0.47, b: 0.56, a: 1}
+    intensity: 0.28
+    shadows: 2
+    shadowStrength: 0.6
+  - path: oyuncu/Camera/FogHeadlight_Left
+    enabled: 1
+    position: {x: 445.5594, y: 4.446844, z: -98.57124}
+    rotation: {x: 0.060814995, y: -0.26118845, z: 0.016402425, w: 0.96323067}
+    color: {r: 0.72, g: 0.82, b: 1, a: 1}
+    intensity: 92
+    shadows: 2
+    shadowStrength: 0.6
+  - path: oyuncu/Camera/FogHeadlight_Right
+    enabled: 1
+    position: {x: 446.95367, y: 4.446844, z: -97.83479}
+    rotation: {x: 0.061435405, y: -0.21891417, z: 0.013899349, w: 0.9737091}
+    color: {r: 0.72, g: 0.82, b: 1, a: 1}
+    intensity: 108
+    shadows: 2
+    shadowStrength: 0.6
+  roadRenderer: {fileID: 0}
+  roadMaterials:
+  - {fileID: 2100000, guid: fa3cb1220507d3c4caf0ee065e6279a6, type: 2}
+  rendererData: {fileID: 11400000, guid: f288ae1f4751b564a96ac7587541f7a2, type: 2}
+  rendererPassMaterial: {fileID: 0}
+  profileExisted: 0
+  fogMaterialExisted: 1
+  roadMaterialExisted: 0
+  skyMaterialExisted: 1
+  guardrailMaterialExisted: 1
+  edgeLineMaterialExisted: 1

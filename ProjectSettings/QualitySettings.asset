@@ -65,8 +65,8 @@ QualitySettings:
     shadows: 2
     shadowResolution: 1
     shadowProjection: 1
-    shadowCascades: 2
-    shadowDistance: 51.063118
+    shadowCascades: 1
+    shadowDistance: 20
     shadowNearPlaneOffset: 3
     shadowCascade2Split: 0.33333334
     shadowCascade4Split: {x: 0.06666667, y: 0.2, z: 0.46666667}
@@ -75,7 +75,7 @@ QualitySettings:
     globalTextureMipmapLimit: 0
     textureMipmapLimitSettings: []
     anisotropicTextures: 2
-    antiAliasing: 2
+    antiAliasing: 0
     softParticles: 0
     softVegetation: 1
     realtimeReflectionProbes: 1
@@ -86,7 +86,7 @@ QualitySettings:
     realtimeGICPUUsage: 100
     adaptiveVsyncExtraA: 0
     adaptiveVsyncExtraB: 0
-    lodBias: 2
+    lodBias: 0.8
     maximumLODLevel: 0
     enableLODCrossFade: 1
     streamingMipmapsActive: 0
@@ -102,11 +102,11 @@ QualitySettings:
     resolutionScalingFixedDPIFactor: 1
     customRenderPipeline: {fileID: 11400000, guid: 4b83569d67af61e458304325a23e5dfd, type: 2}
     terrainQualityOverrides: 0
-    terrainPixelError: 1
-    terrainDetailDensityScale: 1
+    terrainPixelError: 5
+    terrainDetailDensityScale: 0.4
     terrainBasemapDistance: 1000
-    terrainDetailDistance: 80
-    terrainTreeDistance: 5000
+    terrainDetailDistance: 30
+    terrainTreeDistance: 140
     terrainBillboardStart: 50
     terrainFadeLength: 5
     terrainMaxTrees: 50

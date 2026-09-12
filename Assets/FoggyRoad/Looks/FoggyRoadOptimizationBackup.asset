@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 95c339d6b401e1f4b9d6d65504e73a08, type: 3}
+  m_Name: FoggyRoadOptimizationBackup
+  m_EditorClassIdentifier: 
+  hasBackup: 1
+  scenePath: Assets/game prototype scene.unity
+  lodBias: 1.5
+  shadowDistance: 51.063118
+  terrainDetailDensityScale: 1
+  terrainDetailDistance: 80
+  terrainTreeDistance: 5000
+  terrainBillboardStart: 50
+  materials:
+  - {fileID: 2100000, guid: a48ad8aadb27f004390383c89862e6f3, type: 2}
+  - {fileID: 2100000, guid: fc123ab8f2eb56945b5849155624e2c0, type: 2}
+  - {fileID: 2100000, guid: 5d53f2d3d2871cc40bfce7f567098cbe, type: 2}
+  - {fileID: 2100000, guid: 405b9ff318b139d478492b258cc6f606, type: 2}
+  - {fileID: 2100000, guid: b54c1313b2e11d445ac91a934cb2a25c, type: 2}
+  - {fileID: 2100000, guid: 1323bd2ef1050e740801e50c8ee66583, type: 2}
+  - {fileID: 2100000, guid: 1755a5b76c1de4c4b94a31d0addf6190, type: 2}
+  - {fileID: 2100000, guid: d3f698d8d13edc2478d19e143b436434, type: 2}
+  - {fileID: 2100000, guid: 5c9d6db59c6243449afb71e43b047bc4, type: 2}
+  - {fileID: 2100000, guid: ecedb539e743fd64d95bac1d9bb84daa, type: 2}
+  - {fileID: 2100000, guid: c589a3eaae9e93d4a9f61a62726c6972, type: 2}
+  - {fileID: 2100000, guid: 5ef1f84b236fe2a4c9082cb4ab535a7a, type: 2}
+  - {fileID: 2100000, guid: 2c519d34c0d1e4f47b742fc12d67f09c, type: 2}
+  - {fileID: 2100000, guid: 4777e8363f131b54c9bc570b8c7ad9a2, type: 2}
+  - {fileID: 2100000, guid: a9ff991df2f00244ca260a6b71765562, type: 2}
+  - {fileID: 2100000, guid: 10c87f328545597418820ad3cd81757b, type: 2}
+  - {fileID: 2100000, guid: 66b3d33c95708a24090516128320cda1, type: 2}
+  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: 9c219c2ed89b22e4ba8ada71e584a4d3, type: 2}
+  materialInstancing: 01010001010100010101010101010101000000
+  terrains:
+  - {fileID: 0}
+  terrainDrawInstanced: 01
+  terrainTreeLodBias:
+  - 1
+  terrainMaximumFullLodTrees: 32000000
+  fogMaterials:
+  - {fileID: 2100000, guid: efb8bc23f7d9922419d6f5070435c191, type: 2}
+  fogSteps:
+  - 48
+  hasAdvancedBackup: 1
+  terrainPixelError: 1
+  shadowCascades: 2
+  screenSpaceAmbientOcclusionFeature: {fileID: 7833122117494664109, guid: f288ae1f4751b564a96ac7587541f7a2, type: 2}
+  screenSpaceAmbientOcclusionActive: 1

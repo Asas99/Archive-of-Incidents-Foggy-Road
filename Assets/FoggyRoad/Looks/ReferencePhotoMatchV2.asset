@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fd9488000d3734a9e00ee676215985, type: 3}
+  m_Name: ReferencePhotoMatchV2
+  m_EditorClassIdentifier: 
+  components:
+  - {fileID: 4149122941728719052, guid: 3e11162a60c2cd44d9f3430ea8eecc46, type: 2}
+  - {fileID: -6197457747640966479, guid: 3e11162a60c2cd44d9f3430ea8eecc46, type: 2}
+  - {fileID: -4791262017899095018, guid: 3e11162a60c2cd44d9f3430ea8eecc46, type: 2}
+  - {fileID: -5858711437766024626, guid: 3e11162a60c2cd44d9f3430ea8eecc46, type: 2}
+  - {fileID: 3183156881506098909, guid: 3e11162a60c2cd44d9f3430ea8eecc46, type: 2}
+  - {fileID: 3813502181572734142, guid: 3e11162a60c2cd44d9f3430ea8eecc46, type: 2}

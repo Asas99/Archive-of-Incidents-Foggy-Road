@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "ai-game-developer": {
+      "headers": {
+        "Authorization": "Bearer DIxI4QrJ2tcgsOXoINY77sVaJaJQHl91Z_qipkLiEzA"
+      },
+      "type": "http",
+      "url": "https://ai-game.dev/mcp"
+    }
+  }
+}
