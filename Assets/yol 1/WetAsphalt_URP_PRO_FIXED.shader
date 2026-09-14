@@ -147,9 +147,16 @@ Shader "Foggy Road/Wet Asphalt URP PRO"
             #pragma multi_compile _ DIRLIGHTMAP_COMBINED
             #pragma multi_compile_instancing
 
-            // The very large road mesh exhibits camera-relative shadow-atlas artifacts.
-            // Keep direct lighting, but do not sample realtime shadows in this material.
-            #define _RECEIVE_SHADOWS_OFF 1
+            // NOT: Burada eskiden '#define _RECEIVE_SHADOWS_OFF 1' vardi; yol
+            // gercek zamanli golge ALMIYORDU (agac golgeleri asfalta dusmuyordu).
+            // Gerekcesi "cok buyuk yol mesh'inde golge atlasi artefakti" idi.
+            //
+            // Artefaktin asil sebebi golge koordinatinin VERTEX'te hesaplanmasiydi
+            // (bkz. RoadVert / GetShadowCoord). Yol cok buyuk ucgenlerden olustugu
+            // icin cascade sinirinda interpolasyon kayiyor ve bantlanma cikiyordu.
+            // Kaynak duzeltildi: koordinat artik fragment'ta positionWS'ten
+            // hesaplaniyor (URP'nin kendi Lit shader'inin yaptigi gibi), bu yuzden
+            // golge almayi kapatmaya gerek kalmadi.
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
@@ -406,7 +413,15 @@ Shader "Foggy Road/Wet Asphalt URP PRO"
                 input.positionWS = IN.positionWS;
                 input.normalWS = normalWS;
                 input.viewDirectionWS = viewDirWS;
+                // Golge koordinati FRAGMENT'ta uretilir. Vertex'ten interpole
+                // edilen deger buyuk ucgenlerde cascade sinirinda kayiyordu.
+                // Screen-space golge modunda ise vertex'teki ekran konumu dogru
+                // olanidir, o durumda interpolatoru kullaniyoruz.
+#if defined(_MAIN_LIGHT_SHADOWS_SCREEN)
                 input.shadowCoord = IN.shadowCoord;
+#else
+                input.shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
+#endif
                 input.fogCoord = IN.fogFactor;
                 input.vertexLighting = VertexLighting(IN.positionWS, normalWS);
                 input.bakedGI = SAMPLE_GI(IN.uvLM, IN.vertexSH, normalWS);

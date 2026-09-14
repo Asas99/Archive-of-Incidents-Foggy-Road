@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 0.93
   m_AmbientMode: 1
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: 6e33abea5fcd9bf4685fed6fea55e3b8, type: 2}
+  m_SkyboxMaterial: {fileID: 2100000, guid: dfc1567659ac48441814db6e249e8d35, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -2436,7 +2436,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.20200253, z: -0, w: 0.979385}
   m_LocalPosition: {x: 446.75775, y: 4.1, z: -99.27}
-  m_LocalScale: {x: 2.18, y: 2.18, z: 2.18}
+  m_LocalScale: {x: 2.5, y: 2.5, z: 2.5}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 1635575723}
@@ -18021,10 +18021,10 @@ Terrain:
   m_Enabled: 1
   serializedVersion: 6
   m_TerrainData: {fileID: 15600000, guid: 65edf7f5a6f7b584fad05ff484e8ecc8, type: 2}
-  m_TreeDistance: 400
+  m_TreeDistance: 330
   m_TreeBillboardDistance: 250
   m_TreeCrossFadeLength: 40
-  m_TreeMaximumFullLODCount: 150
+  m_TreeMaximumFullLODCount: 400
   m_DetailObjectDistance: 130
   m_DetailObjectDensity: 1
   m_HeightmapPixelError: 2

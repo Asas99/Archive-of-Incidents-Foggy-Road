@@ -125,8 +125,8 @@ Material:
     - _GroundDensity: 0.042
     - _GroundThickness: 2.6
     - _HeightFalloff: 0.45
-    - _MaxDistance: 330
-    - _MaxOpacity: 0.42
+    - _MaxDistance: 300
+    - _MaxOpacity: 0.8
     - _Metallic: 0
     - _NoiseScale: 0.045
     - _NoiseStrength: 0.85

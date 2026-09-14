@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: skybox_aksamustu_bulutlu
+  m_Shader: {fileID: 4800000, guid: e6134d75fc4fc444aab0e184b84ecef5, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 1
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _CloudTex:
+        m_Texture: {fileID: 2800000, guid: ea368994424a9da468c12c6a46969eb0, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _CloudCoverage: 0.63
+    - _CloudInvert: 0.86
+    - _CloudLitPower: 3.2
+    - _CloudRotation: 0
+    - _CloudScroll: 0.6
+    - _CloudSoftness: 0.18
+    - _CloudThickness: 2
+    - _DebugMask: 0
+    - _DetailBlend: 0.65
+    - _Exposure: 1.2
+    - _HorizonFade: 0.18
+    - _HorizonPower: 2.8
+    - _InBlack: 0.47
+    - _InWhite: 0.82
+    - _MaskGamma: 1
+    - _PlaneCurvature: 0.3
+    - _PlaneScale: 0.55
+    - _RimIntensity: 0.9
+    - _SunDiskIntensity: 8
+    - _SunDiskSize: 0.008
+    - _SunGlowIntensity: 1.8
+    - _SunGlowPower: 64
+    m_Colors:
+    - _CloudLitColor: {r: 1.35, g: 0.72, b: 0.38, a: 1}
+    - _CloudShadowColor: {r: 0.2, g: 0.17, b: 0.24, a: 1}
+    - _GroundColor: {r: 0.08, g: 0.07, b: 0.07, a: 1}
+    - _HorizonColor: {r: 0.62, g: 0.45, b: 0.38, a: 1}
+    - _HorizonSunColor: {r: 1.25, g: 0.55, b: 0.22, a: 1}
+    - _PlaneCenter: {r: 0.5, g: 0.72, b: 0, a: 0}
+    - _SunGlowColor: {r: 1.4, g: 0.62, b: 0.28, a: 1}
+    - _ZenithColor: {r: 0.16, g: 0.18, b: 0.3, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

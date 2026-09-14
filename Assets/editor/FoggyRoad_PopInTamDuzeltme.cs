@@ -93,30 +93,56 @@ public static class FoggyRoad_PopInTamDuzeltme
                     //   gunes  7 derece -> 35 m agacin golgesi 285 m -> 300 m gerekirdi
                     // Gunes 7'den 14'e cikarildigi icin 260 -> 170 dusuruldu; 120 m bosuna
                     // odeniyordu. Golge hacmi mesafenin karesiyle olceklenir: (170/260)^2 = 0.43
-                    ad = "KALITE", shadowDistance = 170f, cascades = 3, cascadeBorder = 0.30f,
+                    // shadowDistance 110: GOLGE POP-IN'IN COZUMU.
+                    //   Agaclar cok farkli olceklerde dikili (Pine_B 0.34-0.59,
+                    //   Pine_A 0.45-1.03), bu yuzden kucuk agaclar daha YAKINDA
+                    //   LOD atliyor: LOD0 sadece 49 / 67 m'ye kadar suruyor.
+                    //   Prefabda sadece LOD0 golge dokuyordu -> golge 49 m'de
+                    //   SERT kesiliyordu.
+                    //   'Golgeyi LOD gecisinden once bitir' yaklasimi bu sahnede
+                    //   ise yaramaz (46 m gerekirdi). LOD1'e de golge actirildi;
+                    //   o zaman sinir LOD2 gecisine kayiyor: Pine_B 114, Pine_A 156.
+                    //   Belirleyici 114 m -> shadowDistance 110 secildi.
+                    //   LOD2 ASLA acilmaz (156-404 m; acikken casters 2720 -> 9818).
+                    //   Bkz. Tools > Foggy Road > Agac LOD > 1 - RAPOR
+                    ad = "KALITE", shadowDistance = 110f, cascades = 3, cascadeBorder = 0.30f,
                     cascade2Split = 0.33f, shadowAtlas = 4096, softShadowQuality = 3,
                     shadowNormalBias = 0.5f,
                     // Asagidakiler gorunumu bozmadan maliyeti dusuren kalemler:
                     //   lodBias 2.2 -> 1.8 : LOD gecisleri hala gec, ucgen belirgin azalir
-                    //   treeMaxFullLOD 250 -> 150 : sadece en uzaktaki mesh agaclar billboard olur
-                    //                               (billboard zaten 250 m'de basliyor)
+                    //   treeMaxFullLOD 400 : Bu deger sahnedeki agaclari (SpeedTree)
+                    //     ETKILEMEZ - Unity 6 Manual: "Max Mesh Trees ... SpeedTree
+                    //     trees aren't governed by this limit". Bir ara 1563'e
+                    //     cikarilmisti, bosunaydi. 400 makul bir taban olarak durur
+                    //     (terrain'e SpeedTree disi bir prototip eklenirse diye).
+                    //     Golge pop-in'inin GERCEK sebebi agac prefabinda LOD1/LOD2'nin
+                    //     castShadows = 0 olmasiydi; bkz. Tools > Foggy Road > Agac LOD
                     //   terrainTwoSidedShadow -> false : zemin golgesi iki kez islenmez
                     //   detailDensity 0.65 -> 0.55 : cim CPU maliyeti, mesafe aynen korunur
                     // smallMeshPercent 1: uzaktaki kucuk mesh'leri eler, risk ~sifir
                     lodBias = 1.8f, smallMeshPercent = 1f, shadowCasterFrustumCull = false,
                     farClip = 500f,
-                    treeBillboard = 250f, treeDistance = 400f, treeCrossFade = 40f,
-                    treeMaxFullLOD = 150, detailDistance = 130f, detailDensity = 1.0f,
+                    // treeDistance: agaclar bu mesafede FADE'SIZ yok olur, yani kesim
+                    // gorunmeyecek bir yerde olmali. Iki yol var: kesimi cok uzaga
+                    // itmek (520) ya da SISIN ICINE gommek. Sis artik 300 m'de %80
+                    // opak oldugu icin ikincisi hem bedava hem daha ucuz: 330 m'de
+                    // kesim gorunmez ve 330-520 arasi agaclar hic cizilmez.
+                    treeBillboard = 250f, treeDistance = 330f, treeCrossFade = 40f,
+                    treeMaxFullLOD = 400, detailDistance = 130f, detailDensity = 1.0f,
                     pixelError = 2f, terrainTwoSidedShadow = false,
-                    // Sis, golge menzilinin bittigi yeri ortmeli: 330 m < 260 m golge + pay
-                    fogStart = 80f, fogMaxDistance = 330f, fogMaxOpacity = 0.42f, fogHeightFalloff = 0.45f,
+                    // Sis 0.42 opaklikta hicbir mesafeyi TAM kapatmiyordu; uzaktaki
+                    // her kesim/LOD gecisi gozle goruluyordu. 0.80 + 300 m ile
+                    // uzak mesafedeki tum sureksizlikler sise gomulur.
+                    fogStart = 80f, fogMaxDistance = 300f, fogMaxOpacity = 0.80f, fogHeightFalloff = 0.45f,
                     fogSunScattering = 0.18f, fogAnisotropy = 0.35f
                 };
 
             case Seviye.Performans:
                 return new Ayar
                 {
-                    ad = "PERFORMANS", shadowDistance = 110f, cascades = 2, cascadeBorder = 0.25f,
+                    // lodBias 1.0 -> LOD2 gecisi 114 x (1.0/1.8) = ~63 m'ye kayar.
+                    // Golge mesafesi bunun ALTINDA olmali (bkz. KALITE aciklamasi).
+                    ad = "PERFORMANS", shadowDistance = 60f, cascades = 2, cascadeBorder = 0.25f,
                     cascade2Split = 0.33f, shadowAtlas = 2048, softShadowQuality = 2,
                     shadowNormalBias = 0.6f,
                     lodBias = 1.0f, smallMeshPercent = 1f, shadowCasterFrustumCull = true,
@@ -131,7 +157,9 @@ public static class FoggyRoad_PopInTamDuzeltme
             default: // Dengeli
                 return new Ayar
                 {
-                    ad = "DENGELI", shadowDistance = 170f, cascades = 2, cascadeBorder = 0.30f,
+                    // lodBias 1.4 -> LOD2 gecisi 114 x (1.4/1.8) = ~89 m'ye kayar.
+                    // Golge mesafesi bunun ALTINDA olmali (bkz. KALITE aciklamasi).
+                    ad = "DENGELI", shadowDistance = 85f, cascades = 2, cascadeBorder = 0.30f,
                     cascade2Split = 0.33f, shadowAtlas = 4096, softShadowQuality = 3,
                     shadowNormalBias = 0.5f,
                     lodBias = 1.4f, smallMeshPercent = 0f, shadowCasterFrustumCull = false,
@@ -489,5 +517,6 @@ public static class FoggyRoad_PopInTamDuzeltme
         if (m.HasProperty(ad)) m.SetFloat(ad, v);
         else Debug.Log("[FoggyRoad] Sis materyalinde '" + ad + "' property'si yok, atlandi.");
     }
+
 }
 #endif

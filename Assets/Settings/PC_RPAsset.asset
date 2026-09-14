@@ -53,7 +53,7 @@ MonoBehaviour:
   m_AdditionalLightsShadowResolutionTierHigh: 1024
   m_ReflectionProbeBlending: 1
   m_ReflectionProbeBoxProjection: 1
-  m_ShadowDistance: 260
+  m_ShadowDistance: 110
   m_ShadowCascadeCount: 3
   m_Cascade2Split: 0.33
   m_Cascade3Split: {x: 0.25, y: 0.55}
@@ -83,7 +83,7 @@ MonoBehaviour:
   m_SupportDataDrivenLensFlare: 1
   m_SupportScreenSpaceLensFlare: 1
   m_GPUResidentDrawerMode: 1
-  m_SmallMeshScreenPercentage: 0
+  m_SmallMeshScreenPercentage: 1
   m_GPUResidentDrawerEnableOcclusionCullingInCameras: 0
   m_ShadowType: 1
   m_LocalShadowsSupported: 0

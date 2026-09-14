@@ -21,7 +21,13 @@
 //   TerrainPainter.OnEnable   -> sadece static referans atar
 //   Direction.OnEnable        -> sadece passIndex atar
 //   FpsCounter / KarakterHareket -> ayar yazmaz
-//   => Terrain / URP / Quality / Golge ayarlarini ezen baska script YOK.
+//   DynamicWeatherInstaller   -> OLU KOD. Sinifta [InitializeOnLoad] attribute'u
+//                                yok, hicbir event'e abone degil, InstallIntoActiveScene
+//                                ve TickScenePreview hicbir yerden cagrilmiyor.
+//                                (Icinde treeMaximumFullLODCount = 600 ve skybox
+//                                degistiren kod VAR ama calismiyor. Arac her
+//                                calistiginda bunu tekrar dogrular.)
+//   => Terrain / URP / Quality / Golge / Skybox ayarlarini ezen baska script YOK.
 //
 // Menu: Tools -> Foggy Road/0 - KAYDET ve KILITLE
 //
@@ -159,6 +165,26 @@ public static class FoggyRoad_KaydetVeKilitle
                       " -> Skybox DUZELTILDI. Gokyuzu artik cizilecek.");
         }
 
+        // 4) DynamicWeatherInstaller olu mu? Icinde terrain'e 600 yazan ve
+        // skybox'i degistiren kod var. Su an hicbir event'e bagli degil, ama
+        // biri [InitializeOnLoad] eklerse ayarlar yine ezilmeye baslar.
+        // Her kayitta dogrula ki sessizce geri gelmesin.
+        System.Type inst = System.Type.GetType("DynamicWeatherInstaller");
+        if (inst == null)
+        {
+            Debug.Log("[FoggyRoad] DynamicWeatherInstaller: sinif yok. OK");
+        }
+        else if (inst.GetCustomAttributes(typeof(InitializeOnLoadAttribute), false).Length > 0)
+        {
+            Debug.LogError("[FoggyRoad] DIKKAT: DynamicWeatherInstaller'a [InitializeOnLoad] " +
+                           "eklenmis! Bu sinif Terrain'e maxFullLOD = 600 yazar ve skybox'i " +
+                           "degistirir. Attribute kaldirilmazsa ayarlar her acilista ezilir.");
+        }
+        else
+        {
+            Debug.Log("[FoggyRoad] DynamicWeatherInstaller: [InitializeOnLoad] yok, olu kod. OK");
+        }
+
         return sayac;
     }
 
@@ -235,6 +261,106 @@ public static class FoggyRoad_KaydetVeKilitle
                       ", farClip = " + cam.farClipPlane +
                       " m, occlusionCulling = " + (cam.useOcclusionCulling ? "ACIK" : "kapali"));
         }
+
+        SkyboxYaz();
+        YolGolgesiYaz();
+        AgacLodGolgesiYaz();
+    }
+
+    // ==================================================================
+    //  Agac LOD golgeleri
+    //
+    //  Golge pop-in'inin sebebi agac prefabinda LOD1/LOD2'nin castShadows = 0
+    //  olmasiydi (agac LOD atlayinca golgesi bir anda yok oluyordu).
+    //  SpeedTree .st dosyasi yeniden import edilirse prefab yeniden uretilip
+    //  bu ayar kaybolabilir - her kayitta kontrol edilir.
+    // ==================================================================
+    static void AgacLodGolgesiYaz()
+    {
+        foreach (Terrain t in Object.FindObjectsByType<Terrain>(FindObjectsSortMode.None))
+        {
+            if (t.terrainData == null) continue;
+
+            foreach (TreePrototype p in t.terrainData.treePrototypes)
+            {
+                if (p.prefab == null) continue;
+
+                LODGroup grup = p.prefab.GetComponent<LODGroup>();
+                if (grup == null) continue;
+
+                LOD[] lodlar = grup.GetLODs();
+                string durum = "";
+                bool eksik = false;
+
+                for (int i = 0; i < lodlar.Length; i++)
+                {
+                    bool golge = false;
+                    foreach (Renderer r in lodlar[i].renderers)
+                        if (r != null && r.shadowCastingMode != ShadowCastingMode.Off)
+                            golge = true;
+
+                    durum += "LOD" + i + "=" + (golge ? "On" : "Off") + " ";
+
+                    bool sonLod = i == lodlar.Length - 1;
+                    bool billboard = sonLod && grup.lastLODBillboard;
+                    // Billboard disinda golgesiz LOD varsa pop-in geri gelmis demektir
+                    if (i > 0 && !golge && !billboard) eksik = true;
+                }
+
+                Debug.Log("Agac '" + p.prefab.name + "' golgeleri: " + durum);
+
+                if (eksik)
+                    Debug.LogWarning("  DIKKAT: golgesiz LOD var. Agac LOD atlayinca golgesi " +
+                                     "bir anda kaybolur.\n" +
+                                     "  Duzeltmek icin: Tools > Foggy Road > Agac LOD > " +
+                                     "2 - AGAC GOLGELERINI DUZELT");
+            }
+        }
+    }
+
+    // ==================================================================
+    //  Skybox: sahnenin Lighting ayarinda saklanir, sahne ile kaydedilir.
+    // ==================================================================
+    static void SkyboxYaz()
+    {
+        Material sky = RenderSettings.skybox;
+        if (sky == null)
+        {
+            Debug.LogWarning("Skybox: ATANMAMIS. Lighting > Environment bos.");
+            return;
+        }
+
+        string yol = AssetDatabase.GetAssetPath(sky);
+        Debug.Log("Skybox: '" + sky.name + "' (" + yol + "), shader = " +
+                  (sky.shader != null ? sky.shader.name : "?"));
+
+        if (sky.shader != null && sky.shader.name == "Environment/Sunset Sky With Clouds")
+        {
+            Debug.Log("  Bulut: invert = " + Mf(sky, "_CloudInvert") +
+                      ", kaplama = " + Mf(sky, "_CloudCoverage") +
+                      ", yumusaklik = " + Mf(sky, "_CloudSoftness") +
+                      ", dagilim = " + Mf(sky, "_DetailBlend") +
+                      ", hiz = " + Mf(sky, "_CloudScroll") +
+                      ", tepe olcek = " + Mf(sky, "_PlaneScale"));
+
+            if (sky.HasProperty("_DebugMask") && sky.GetFloat("_DebugMask") > 0.5f)
+                Debug.LogWarning("  DIKKAT: 'Maskeyi goster' ACIK. Gokyuzu siyah-beyaz " +
+                                 "gorunur. Kapatmak icin materyalde _DebugMask = 0 yap.");
+        }
+    }
+
+    // ==================================================================
+    //  Yol gercek zamanli golge aliyor mu
+    // ==================================================================
+    static void YolGolgesiYaz()
+    {
+        Material yol = AssetDatabase.LoadAssetAtPath<Material>("Assets/yol 1/RoadWet 1.mat");
+        if (yol == null) return;
+
+        Debug.Log("Yol materyali '" + yol.name + "': shader = " +
+                  (yol.shader != null ? yol.shader.name : "?") +
+                  ", golge alma = " +
+                  (yol.IsKeywordEnabled("_RECEIVE_SHADOWS_OFF") ? "KAPALI (!)" : "acik"));
     }
 
     // ------------------------------------------------------------ yardimcilar
