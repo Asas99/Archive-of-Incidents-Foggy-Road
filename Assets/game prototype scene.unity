@@ -18,8 +18,8 @@ RenderSettings:
   m_FogColor: {r: 0.5396226, g: 0.5396226, b: 0.5396226, a: 0.3254902}
   m_FogMode: 2
   m_FogDensity: 0.004
-  m_LinearFogStart: 0
-  m_LinearFogEnd: 300
+  m_LinearFogStart: 300
+  m_LinearFogEnd: 6548.9863
   m_AmbientSkyColor: {r: 0.35, g: 0.28, b: 0.26, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
@@ -7214,6 +7214,7 @@ MonoBehaviour:
   fogFlowSpeed: 0.06
   fogBankCycleSeconds: 720
   skyFlowSpeed: 0.18
+  enableDrizzle: 0
   drizzleCycleSeconds: 720
   drizzleDurationSeconds: 105
   drizzleEmissionRate: 90
@@ -17284,6 +17285,63 @@ MonoBehaviour:
   yAngle: 173
   addSunDirection: 0
   levels: {x: 0.7108909, y: 0.9504951}
+--- !u!1001 &1411078069
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -1578.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -186.4
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 1751.7
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: -0.3826832
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.9238797
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 225
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_Name
+      value: SkyboxMountains03 (2)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 5111f521d7066864f84549af2a313da9, type: 3}
 --- !u!1 &1429354717
 GameObject:
   m_ObjectHideFlags: 0
@@ -19175,6 +19233,63 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 7d40f0748277cb7408dcd12c0a036fb4, type: 3}
   m_PrefabInstance: {fileID: 1600845996}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1616571764
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -1578.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -33.7
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 2037.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: -0.13052641
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.9914448
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 195
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_Name
+      value: SkyboxMountains03 (3)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 5111f521d7066864f84549af2a313da9, type: 3}
 --- !u!1001 &1617479696
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -19574,8 +19689,8 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.1
-  far clip plane: 500
+  near clip plane: 0.3
+  far clip plane: 4800
   field of view: 60
   orthographic: 0
   orthographic size: 5
@@ -20085,6 +20200,67 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1312642870}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &1676559459
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 2756.7
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -51.3
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 2223
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.96592623
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.25881764
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_Name
+      value: SkyboxMountains03 (1)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 5111f521d7066864f84549af2a313da9, type: 3}
 --- !u!1001 &1682191562
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -20257,6 +20433,83 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1704035753}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1001 &1704822910
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1397881592064033955, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 5.65
+      objectReference: {fileID: 0}
+    - target: {fileID: 1397881592064033955, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 5.65
+      objectReference: {fileID: 0}
+    - target: {fileID: 1397881592064033955, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 5.65
+      objectReference: {fileID: 0}
+    - target: {fileID: 1397881592064033955, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 437.37204
+      objectReference: {fileID: 0}
+    - target: {fileID: 1397881592064033955, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 62.196022
+      objectReference: {fileID: 0}
+    - target: {fileID: 1397881592064033955, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 1527.7798
+      objectReference: {fileID: 0}
+    - target: {fileID: 1397881592064033955, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1397881592064033955, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1397881592064033955, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1397881592064033955, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1397881592064033955, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1397881592064033955, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1397881592064033955, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1397881592064033955, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8423933847119075203, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_Name
+      value: SkyboxMountains (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 8423933847119075203, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: bafa13e7f7584804785c3f212ae0bf27, type: 3}
 --- !u!1 &1710297356
 GameObject:
   m_ObjectHideFlags: 0
@@ -25620,6 +25873,67 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 7d40f0748277cb7408dcd12c0a036fb4, type: 3}
   m_PrefabInstance: {fileID: 2079083551}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &2110979980
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 2756.7
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -51.3
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 939.5
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.99144495
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.13052595
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_Name
+      value: SkyboxMountains03
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 5111f521d7066864f84549af2a313da9, type: 3}
 --- !u!1 &2112965319
 GameObject:
   m_ObjectHideFlags: 0
@@ -26009,3 +26323,8 @@ SceneRoots:
   - {fileID: 1383773776}
   - {fileID: 1204911520}
   - {fileID: 1137246065}
+  - {fileID: 1704822910}
+  - {fileID: 2110979980}
+  - {fileID: 1676559459}
+  - {fileID: 1411078069}
+  - {fileID: 1616571764}

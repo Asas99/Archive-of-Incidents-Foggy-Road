@@ -204,7 +204,13 @@ public static class FoggyRoad_CimDagilim
             }
         }
 
-        Undo.RecordObject(td, "Taban cim yay");
+        // DIKKAT: burada Undo.RecordObject(td, ...) KULLANILMAZ.
+        // TerrainData devasa bir nesne (1024x1024 detail x 13 katman +
+        // heightmap + alphamap). Undo yigina tam kopyasi girer ve Ctrl+Z/Ctrl+Y
+        // yapildiginda Unity tum terrain/tree veritabanini yeniden kurar;
+        // editor DAKIKALARCA kilitlenir (olculdu: 'Hold on... Menu.Redo' 4 dk+).
+        // Geri donus icin Undo degil, yukarida alinan YEDEK asset kullanilir:
+        //   Cim Dagilimi > 2 - GERI AL
         td.SetDetailLayer(0, 0, taban, harita);
         EditorUtility.SetDirty(td);
         AssetDatabase.SaveAssets();
@@ -256,7 +262,7 @@ public static class FoggyRoad_CimDagilim
             return;
         }
 
-        Undo.RecordObject(td, "Cim dagilimi geri al");
+        // Undo.RecordObject YOK - sebebi icin yukaridaki aciklamaya bak.
         for (int i = 0; i < td.detailPrototypes.Length && i < kaynak.detailPrototypes.Length; i++)
             td.SetDetailLayer(0, 0, i, kaynak.GetDetailLayer(0, 0, w, h, i));
 

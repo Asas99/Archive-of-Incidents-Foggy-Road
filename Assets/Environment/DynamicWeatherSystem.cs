@@ -25,6 +25,11 @@ public sealed class DynamicWeatherSystem : MonoBehaviour
     [SerializeField, Range(0f, 2f)] private float skyFlowSpeed = 0.18f;
 
     [Header("Intermittent drizzle")]
+    // Ciseleme tamamen kapatilabilsin diye anahtar. drizzleEmissionRate'in
+    // alt siniri 10 oldugu icin emisyonu sifirlayarak kapatmak mumkun degildi.
+    // Kapatildiginda parcacik sistemi durdurulur ve emisyon sifirlanir.
+    [Tooltip("Kapaliysa ara ara yagan ciseleme HIC olusmaz.")]
+    [SerializeField] private bool enableDrizzle = true;
     [Tooltip("Time between the starts of two drizzle windows.")]
     [SerializeField, Range(300f, 1200f)] private float drizzleCycleSeconds = 720f;
     [SerializeField, Range(30f, 240f)] private float drizzleDurationSeconds = 105f;
@@ -206,6 +211,19 @@ public sealed class DynamicWeatherSystem : MonoBehaviour
     {
         if (!Application.isPlaying)
             return;
+
+        if (!enableDrizzle)
+        {
+            // Zaten olusmus bir sistem varsa sustur; yoksa hic olusturma.
+            if (drizzleParticles != null)
+            {
+                ParticleSystem.EmissionModule kapali = drizzleParticles.emission;
+                kapali.rateOverTime = 0f;
+                if (drizzleParticles.isPlaying)
+                    drizzleParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+            return;
+        }
 
         float cycle = Mathf.Max(drizzleCycleSeconds, drizzleDurationSeconds + 1f);
         float windowTime = Mathf.Repeat(time, cycle);
