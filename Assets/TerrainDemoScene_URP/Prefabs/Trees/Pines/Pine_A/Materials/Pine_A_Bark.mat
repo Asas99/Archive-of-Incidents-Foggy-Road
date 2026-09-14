@@ -26,9 +26,9 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - BACKFACE_NORMAL_MODE_NONE
-  - _WINDQUALITY_FAST
   m_InvalidKeywords:
   - _EMISSION
+  - _WINDQUALITY_FAST
   m_LightmapFlags: 2
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -78,7 +78,7 @@ Material:
     - BACKFACE_NORMAL_MODE: 2
     - Diffusion_Profile: 3.5648174
     - EFFECT_BILLBOARD: 0
-    - EFFECT_EXTRA_TEX: 1
+    - EFFECT_EXTRA_TEX: 0
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
     - _AlphaClipThreshold: 0.1
@@ -101,7 +101,7 @@ Material:
     - _DstBlend: 0
     - _EnableBlendModePreserveSpecularLighting: 1
     - _EnableFogOnTransparent: 1
-    - _Glossiness: 0.5
+    - _Glossiness: 0
     - _HueVariationKwToggle: 1
     - _Metallic: 0
     - _NormalMapKwToggle: 1
@@ -153,10 +153,10 @@ Material:
     m_Colors:
     - Diffusion_Profile_Asset: {r: 2.2888926e+38, g: 1.2389358e-26, b: 7.69327e-37, a: 0.00018220427}
     - _AO_Remap: {r: 0.5, g: 1, b: 0, a: 0}
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 0.85660374, g: 0.85660374, b: 0.85660374, a: 1}
     - _DoubleSidedConstants: {r: -1, g: -1, b: -1, a: 0}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
-    - _HueVariationColor: {r: 0.4509804, g: 0.40343803, b: 0.28235295, a: 1}
+    - _HueVariationColor: {r: 0.3660378, g: 0.3660378, b: 0.3660378, a: 1}
     - _SubsurfaceColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

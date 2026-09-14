@@ -31,8 +31,23 @@ public sealed class DynamicWeatherSystem : MonoBehaviour
     [SerializeField, Range(10f, 220f)] private float drizzleEmissionRate = 90f;
     [SerializeField, Range(0.5f, 8f)] private float drizzleFallSpeed = 3.2f;
 
-    // Trees are drawn as swaying meshes out to this distance and not submitted past it.
-    private const float TreeViewDistance = 350f;
+    [Header("Terrain override")]
+    // DIKKAT: Bu blok eskiden sabit degerleri her OnEnable'da Terrain'e ZORLA yaziyordu.
+    // Domain reload, sahne acilisi ve Play'e girisin hepsi OnEnable tetikledigi icin
+    // kullanicinin/araclarin ayarladigi Terrain degerleri surekli geri aliniyordu:
+    // uzak agaclar billboard'a donup bulaniklasiyor, cim 60 m'de patliyor, zemin
+    // sicriyordu. Artik varsayilan KAPALI - sahnedeki Terrain degerleri gecerli.
+    [Tooltip("Acilirsa asagidaki degerler her yuklemede Terrain'e yazilir ve sahnedeki " +
+             "ayarlar EZILIR. Kapali birakmak onerilir.")]
+    [SerializeField] private bool overrideTerrainSettings;
+
+    [SerializeField] private float treeViewDistance = 320f;
+    [SerializeField] private float treeMeshDistance = 180f;
+    [SerializeField] private float treeCrossFadeLength = 35f;
+    [SerializeField] private int treeMaximumFullLODCount = 120;
+    [SerializeField] private float detailObjectDistance = 110f;
+    [SerializeField, Range(0f, 1f)] private float detailObjectDensity = 0.6f;
+    [SerializeField] private float heightmapPixelError = 4f;
 
     private static readonly int WeatherWindVector = Shader.PropertyToID("_WeatherWindVector");
     private static readonly int WeatherDynamics = Shader.PropertyToID("_WeatherDynamics");
@@ -108,20 +123,21 @@ public sealed class DynamicWeatherSystem : MonoBehaviour
 
         windZone.mode = WindZoneMode.Directional;
 
-        // Two things are tuned together here.
-        // 1) Billboarded terrain trees never run the SpeedTree wind vertex path, so the
-        //    billboard threshold must sit beyond the visible range or the canopy freezes.
-        // 2) The visible range is set by the fog, which saturates around 110 m, so drawing
-        //    trees out to kilometres only burns CPU on geometry nobody can see.
-        // Keeping both at the same distance means every tree you can actually see is a real
-        // mesh that sways, and nothing past that is submitted at all.
+        // Billboarded terrain trees never run the SpeedTree wind vertex path, so the billboard
+        // threshold has to stay beyond what the player can actually make out through the fog.
+        // Bu blok artik sadece acik acik istenirse calisir; kapaliyken sahnedeki Terrain
+        // ayarlarina hic dokunulmaz.
+        if (!overrideTerrainSettings) return;
+
         foreach (Terrain terrain in Terrain.activeTerrains)
         {
-            terrain.treeDistance = TreeViewDistance;
-            terrain.treeBillboardDistance = TreeViewDistance;
-            terrain.treeMaximumFullLODCount = 2000;
-            terrain.detailObjectDistance = 110f;
-            terrain.heightmapPixelError = 10f;
+            terrain.treeDistance = treeViewDistance;
+            terrain.treeBillboardDistance = treeMeshDistance;
+            terrain.treeCrossFadeLength = treeCrossFadeLength;
+            terrain.treeMaximumFullLODCount = treeMaximumFullLODCount;
+            terrain.detailObjectDistance = detailObjectDistance;
+            terrain.detailObjectDensity = detailObjectDensity;
+            terrain.heightmapPixelError = heightmapPixelError;
         }
     }
 
@@ -146,19 +162,37 @@ public sealed class DynamicWeatherSystem : MonoBehaviour
 
 
         if (windZone != null)
-        {
-            windZone.windMain = currentWind;
-            windZone.windTurbulence = turbulence;
-            windZone.windPulseMagnitude = gustStrength;
-            windZone.windPulseFrequency = gustFrequency;
-            transform.rotation = Quaternion.LookRotation(new Vector3(direction.x, 0f, direction.y));
-        }
+            ApplyWindZone(direction);
 
         if (updateRuntimeEffects)
             UpdateIntermittentDrizzle(time, direction, currentWind);
 
         if (force)
             DynamicGI.UpdateEnvironment();
+    }
+
+    // SpeedTree wind is an integrating simulation driven by the WindZone. Rewriting every
+    // parameter each frame keeps restarting that integration, which is what left the canopy
+    // frozen in play mode. Push a value only when it actually changed, keep windMain steady
+    // and let the WindZone's own pulse produce the gusting.
+    private void ApplyWindZone(Vector2 direction)
+    {
+        float targetMain = Mathf.Clamp(steadyWind, 0f, 1.6f);
+        if (Mathf.Abs(windZone.windMain - targetMain) > 0.02f)
+            windZone.windMain = targetMain;
+
+        if (Mathf.Abs(windZone.windTurbulence - turbulence) > 0.01f)
+            windZone.windTurbulence = turbulence;
+
+        if (Mathf.Abs(windZone.windPulseMagnitude - gustStrength) > 0.01f)
+            windZone.windPulseMagnitude = gustStrength;
+
+        if (Mathf.Abs(windZone.windPulseFrequency - gustFrequency) > 0.001f)
+            windZone.windPulseFrequency = gustFrequency;
+
+        Quaternion targetRotation = Quaternion.LookRotation(new Vector3(direction.x, 0f, direction.y));
+        if (Quaternion.Angle(transform.rotation, targetRotation) > 0.5f)
+            transform.rotation = targetRotation;
     }
 
     private float GetFogFlowMultiplier()

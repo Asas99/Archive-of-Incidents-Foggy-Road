@@ -3,7 +3,27 @@ guid: 75612910dcef58f4dbf5ff763080d525
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: PCRG_Road_Material
+    second: {fileID: 2100000, guid: 4fdf72e6836eee94ab2b2ea768e2d424, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: GRPRO_Dark_Wet_Steel
+    second: {fileID: 2100000, guid: 25d83020246ef9344b86a39b58e8143f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: GRPRO_Bolts
+    second: {fileID: 2100000, guid: 470680cdf93f6a043868bb74e7af7756, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: GRPRO_Reflector
+    second: {fileID: 2100000, guid: 89de333bc1fe980458b111656cbb8634, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

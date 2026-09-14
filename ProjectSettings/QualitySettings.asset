@@ -63,10 +63,10 @@ QualitySettings:
     name: PC
     pixelLightCount: 2
     shadows: 2
-    shadowResolution: 1
+    shadowResolution: 3
     shadowProjection: 1
-    shadowCascades: 1
-    shadowDistance: 20
+    shadowCascades: 2
+    shadowDistance: 260
     shadowNearPlaneOffset: 3
     shadowCascade2Split: 0.33333334
     shadowCascade4Split: {x: 0.06666667, y: 0.2, z: 0.46666667}
@@ -76,7 +76,7 @@ QualitySettings:
     textureMipmapLimitSettings: []
     anisotropicTextures: 2
     antiAliasing: 0
-    softParticles: 0
+    softParticles: 1
     softVegetation: 1
     realtimeReflectionProbes: 1
     billboardsFaceCameraPosition: 1
@@ -86,7 +86,7 @@ QualitySettings:
     realtimeGICPUUsage: 100
     adaptiveVsyncExtraA: 0
     adaptiveVsyncExtraB: 0
-    lodBias: 0.8
+    lodBias: 1.8
     maximumLODLevel: 0
     enableLODCrossFade: 1
     streamingMipmapsActive: 0
@@ -102,12 +102,12 @@ QualitySettings:
     resolutionScalingFixedDPIFactor: 1
     customRenderPipeline: {fileID: 11400000, guid: 4b83569d67af61e458304325a23e5dfd, type: 2}
     terrainQualityOverrides: 0
-    terrainPixelError: 5
-    terrainDetailDensityScale: 0.4
+    terrainPixelError: 1
+    terrainDetailDensityScale: 1
     terrainBasemapDistance: 1000
-    terrainDetailDistance: 30
-    terrainTreeDistance: 140
-    terrainBillboardStart: 50
+    terrainDetailDistance: 200
+    terrainTreeDistance: 5000
+    terrainBillboardStart: 500
     terrainFadeLength: 5
     terrainMaxTrees: 50
     excludedTargetPlatforms:

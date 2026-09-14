@@ -11,6 +11,7 @@ public sealed class FoggyRoadFoliageOptimization : MonoBehaviour
     [Min(1f)] public float fogCullDistance = 235f;
     [Min(1f)] public float smallFoliageCullDistance = 105f;
     [Min(0f)] public float fogCullHysteresis = 16f;
+    [Min(0f)] public float shadowHysteresis = 10f;
     [Min(0.05f)] public float refreshInterval = 0.2f;
     public bool limitDistantFoliageShadows;
     public bool limitDistantRockShadows;
@@ -30,6 +31,7 @@ public sealed class FoggyRoadFoliageOptimization : MonoBehaviour
         public bool isSmallFoliage;
         public bool canCullInFog;
         public bool cullApplied;
+        public bool shadowTrimApplied;
         public ShadowCastingMode appliedShadowCastingMode;
         public bool appliedForceRenderingOff;
     }
@@ -83,19 +85,37 @@ public sealed class FoggyRoadFoliageOptimization : MonoBehaviour
     private void Refresh()
     {
         Vector3 cameraPosition = transform.position;
-        float shadowDistanceSqr = foliageShadowDistance * foliageShadowDistance;
-        float rockShadowDistanceSqr = rockShadowDistance * rockShadowDistance;
 
         foreach (Entry entry in entries)
         {
             if (entry.renderer == null) continue;
             float distanceSqr = (entry.renderer.bounds.center - cameraPosition).sqrMagnitude;
 
-            bool trimFoliageShadow = limitDistantFoliageShadows && entry.isFoliage &&
-                                      distanceSqr > shadowDistanceSqr;
-            bool trimRockShadow = limitDistantRockShadows && entry.isRock &&
-                                  distanceSqr > rockShadowDistanceSqr;
-            ShadowCastingMode desiredShadowMode = (trimFoliageShadow || trimRockShadow)
+            // Golgeyi acip kapatirken tek bir esik kullanmak "bir anda golge olustu" seklinde
+            // gorunur pop yaratiyordu. Kapatma esigi uzakta, tekrar acma esigi daha yakinda
+            // olacak sekilde histerezis uyguluyoruz; boylece sinirin uzerinde gidip gelirken
+            // golge yanip sonmuyor.
+            float shadowLimit = entry.isRock ? rockShadowDistance : foliageShadowDistance;
+            bool shadowLimitEnabled = (limitDistantFoliageShadows && entry.isFoliage) ||
+                                      (limitDistantRockShadows && entry.isRock);
+
+            if (!shadowLimitEnabled)
+            {
+                entry.shadowTrimApplied = false;
+            }
+            else
+            {
+                float offDistanceSqr = shadowLimit * shadowLimit;
+                float onDistance = Mathf.Max(1f, shadowLimit - shadowHysteresis);
+                float onDistanceSqr = onDistance * onDistance;
+
+                if (!entry.shadowTrimApplied && distanceSqr > offDistanceSqr)
+                    entry.shadowTrimApplied = true;
+                else if (entry.shadowTrimApplied && distanceSqr < onDistanceSqr)
+                    entry.shadowTrimApplied = false;
+            }
+
+            ShadowCastingMode desiredShadowMode = entry.shadowTrimApplied
                 ? ShadowCastingMode.Off
                 : entry.originalShadowCastingMode;
             if (entry.appliedShadowCastingMode != desiredShadowMode)

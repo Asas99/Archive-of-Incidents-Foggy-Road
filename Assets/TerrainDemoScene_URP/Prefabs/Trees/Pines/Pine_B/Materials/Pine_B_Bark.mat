@@ -29,9 +29,9 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - BACKFACE_NORMAL_MODE_NONE
-  - _WINDQUALITY_FAST
   m_InvalidKeywords:
   - _EMISSION
+  - _WINDQUALITY_FAST
   m_LightmapFlags: 2
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -81,7 +81,7 @@ Material:
     - BACKFACE_NORMAL_MODE: 2
     - Diffusion_Profile: 3.5648174
     - EFFECT_BILLBOARD: 0
-    - EFFECT_EXTRA_TEX: 1
+    - EFFECT_EXTRA_TEX: 0
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
     - _AlphaClipThreshold: 0.1
@@ -104,7 +104,7 @@ Material:
     - _DstBlend: 0
     - _EnableBlendModePreserveSpecularLighting: 1
     - _EnableFogOnTransparent: 1
-    - _Glossiness: 0.5
+    - _Glossiness: 0
     - _HueVariationKwToggle: 1
     - _Metallic: 0
     - _NormalMapKwToggle: 1
