@@ -169,25 +169,53 @@ public static class FoggyRoad_BulutluGokyuzu
 
         Undo.RecordObject(m, "Aksamustu paleti");
 
-        // --- bulut maskesi
-        // Dokuda KOYU = yogun bulut oldugu icin maske ters cevrilir.
-        // Dokunun luminance araligi dar (~0.25-0.60); Levels bunu 0-1'e yayar,
-        // boylece kaplama ayari tum aralikta kademeli calisir.
+        // --- bulut sekli (PROSEDUREL fbm)
+        // Bulutlar artik fotograftan degil, prosedurel gurultuden uretiliyor:
+        // tekrar eden siluet yok, her yon farkli. Oktav sayisi detay/maliyet
+        // dengesi - dusurmek aninda GPU kazanci.
+        m.SetFloat("_CloudScale", 1.6f);
+        m.SetFloat("_Octaves", 5f);
+        m.SetFloat("_Lacunarity", 2.0f);
+        m.SetFloat("_Gain", 0.5f);
+
+        // --- dagilim (domain warping)
+        // fbm'i kendi uzerine katlar -> girdapli, "random dagilmis" bulut
+        // alani. 0 yapilirsa duz/yumusak, 1.5 civarinda cok parcali olur.
+        m.SetFloat("_WarpStrength", 0.75f);
+        m.SetFloat("_WarpScale", 1.0f);
+
+        // --- kapsama ve keskinlik (birbirinden BAGIMSIZ)
+        m.SetFloat("_Coverage", 0.45f);
+        m.SetFloat("_Sharpness", 0.35f);
+
+        // --- hareket
+        // Sahne ruzgari acik: yon ve hiz hava sisteminden gelir, bulutlar
+        // agaclarla ayni ruzgara bagli kalir. Kapatilirsa _WindDirection
+        // acisi kullanilir.
+        // _OctaveSpeedBias kritik: yuksek frekansli oktavlar daha hizli
+        // kayar -> bulutlar sadece suzulmez, kayarken SEKIL DEGISTIRIR.
+        m.SetFloat("_UseSceneWind", 1f);
+        m.SetFloat("_WindDirection", 45f);
+        m.SetFloat("_WindSpeed", 1.4f);      // 1 gurultu birimi ~48 sn
+        m.SetFloat("_EvolveSpeed", 1.0f);
+        m.SetFloat("_OctaveSpeedBias", 0.6f);
+
+        // --- ikinci bulut kati
+        m.SetFloat("_Layer2Scale", 2.6f);
+        m.SetFloat("_Layer2Weight", 0.45f);
+        m.SetFloat("_Layer2Speed", 1.6f);
+
+        // --- fotograf detayi
+        // 0 = tamamen prosedurel (onerilen). Yukseltilirse elde bulunan
+        // equirect fotografin kenar detayi karisir; Levels ayarlari o zaman
+        // devreye girer.
+        m.SetFloat("_PhotoDetail", 0f);
         m.SetFloat("_CloudInvert", 1f);
         m.SetFloat("_InBlack", 0.34f);
         m.SetFloat("_InWhite", 0.82f);
-        m.SetFloat("_MaskGamma", 1.0f);
-        m.SetFloat("_CloudCoverage", 0.55f);
-        m.SetFloat("_CloudSoftness", 0.18f);
-        m.SetFloat("_DetailBlend", 0.65f);     // ikinci katman = dagilim
-        m.SetFloat("_CloudScroll", 0.35f);     // ~4-5 dk'da gogu geciyor
 
-        // --- zenit (kutup tekilligi kapatmasi) ve ufuk incelmesi
-        // _PlaneCenter kritik: kaydirmasiz tepe UV'si (0,0)'a gider, orada
-        // dokunun parlak sis denizi var -> tam yukarida bulut kaybolur.
+        // --- gorunum
         m.SetFloat("_PlaneCurvature", 0.30f);
-        m.SetFloat("_PlaneScale", 0.55f);
-        m.SetVector("_PlaneCenter", new Vector4(0.5f, 0.72f, 0f, 0f));
         m.SetFloat("_HorizonFade", 0.18f);
 
         // --- teshis kapali
@@ -222,18 +250,30 @@ public static class FoggyRoad_BulutluGokyuzu
 
         Selection.activeObject = m;
 
-        Debug.Log("[FoggyRoad] Aksamustu paleti uygulandi.\n" +
-                  "  Daha cok bulut            : Bulut kaplamasi 0.55 -> 0.70\n" +
-                  "  Daha keskin kutle         : Bulut kenar yumusakligi 0.18 -> 0.10\n" +
-                  "  Daha parcali / dagilmis   : Dagilim 0.65 -> 0.85\n" +
-                  "  Tepede bulut az gelirse   : Tepe olcek 0.25 -> 0.18\n" +
-                  "  Tepede doku tekrar ederse : Tepe olcek 0.25 -> 0.35\n" +
-                  "  Bulut hic gorunmuyorsa    : Maske ters cevir 1 <-> 0 dene\n" +
-                  "  Kontrast az/cok gelirse   : Seviye siyah 0.34 / beyaz 0.82\n" +
-                  "  Isikta bulut secilmiyorsa : Kalinlik 2.0 -> 3.0, Kenar parlamasi 0.9 -> 1.6\n" +
-                  "  NE OLDUGUNU GORMEK ICIN   : 'Maskeyi goster' 1 yap (siyah=gok, beyaz=bulut)\n" +
-                  "  Daha sicak ufuk           : Ufuk - gunes tarafi rengini yukselt\n" +
-                  "  Bulut daha hizli aksin    : Bulut kayma hizi 0.35 -> 0.8");
+        Debug.Log("[FoggyRoad] Aksamustu paleti uygulandi (PROSEDUREL bulutlar).\n" +
+                  "\n  --- SEKIL ---\n" +
+                  "  Daha cok bulut          : Kapsama 0.45 -> 0.65\n" +
+                  "  Daha keskin kenar       : Kenar keskinligi 0.35 -> 0.15\n" +
+                  "  Daha yumusak/pusu       : Kenar keskinligi 0.35 -> 0.60\n" +
+                  "  Daha buyuk kutleler     : Bulut olcegi 1.6 -> 0.9\n" +
+                  "  Daha kucuk/parcali      : Bulut olcegi 1.6 -> 3.0\n" +
+                  "  Daha fazla ince detay   : Oktav 5 -> 7  (GPU maliyeti artar)\n" +
+                  "\n  --- DAGILIM ---\n" +
+                  "  Daha girdapli/dagilmis  : Girdap gucu 0.75 -> 1.3\n" +
+                  "  Daha duzenli/yumusak    : Girdap gucu 0.75 -> 0.2\n" +
+                  "  Girdap boyutu           : Girdap olcegi 1.0 (buyuk = genis akis)\n" +
+                  "\n  --- HAREKET ---\n" +
+                  "  Daha hizli aksin        : Ruzgar hizi 1.4 -> 3.0 (aralik 0-6)\n" +
+                  "  Daha yavas / sakin      : Ruzgar hizi 1.4 -> 0.7\n" +
+                  "  Daha cok sekil degissin : Sekil degistirme hizi 1.0 -> 2.5\n" +
+                  "  Oktav hiz farki         : 0.6 (0 = rijit blok gibi kayar)\n" +
+                  "  Sahne ruzgarindan ayir  : 'Sahne ruzgarini kullan' kapat,\n" +
+                  "                            sonra Ruzgar yonu acisini gir\n" +
+                  "\n  --- GORUNUM ---\n" +
+                  "  Isikta bulut secilmiyor : Kalinlik 2.0 -> 3.0, Kenar parlamasi 0.9 -> 1.6\n" +
+                  "  Daha sicak ufuk         : Ufuk - gunes tarafi rengini yukselt\n" +
+                  "  Fotograf detayi istersen: Fotograf detayi 0 -> 0.4\n" +
+                  "\n  NE OLDUGUNU GORMEK ICIN : 'Maskeyi goster' 1 yap (siyah=gok, beyaz=bulut)");
     }
 
     // ==================================================================

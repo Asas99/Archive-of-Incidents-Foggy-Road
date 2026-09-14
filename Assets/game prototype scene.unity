@@ -17337,6 +17337,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: SkyboxMountains03 (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_StaticEditorFlags
+      value: 2147483647
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -19285,6 +19293,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: SkyboxMountains03 (3)
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_StaticEditorFlags
+      value: 2147483647
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -19689,8 +19705,8 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
-  far clip plane: 4800
+  near clip plane: 0.1
+  far clip plane: 500
   field of view: 60
   orthographic: 0
   orthographic size: 5
@@ -20255,6 +20271,14 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 5111f521d7066864f84549af2a313da9, type: 3}
       propertyPath: m_Name
       value: SkyboxMountains03 (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_StaticEditorFlags
+      value: 2147483647
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -25928,6 +25952,14 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 5111f521d7066864f84549af2a313da9, type: 3}
       propertyPath: m_Name
       value: SkyboxMountains03
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5111f521d7066864f84549af2a313da9, type: 3}
+      propertyPath: m_StaticEditorFlags
+      value: 2147483647
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

@@ -12,7 +12,8 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _USESCENEWIND_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 1
@@ -29,28 +30,45 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _CloudCoverage: 0.63
-    - _CloudInvert: 0.86
+    - _CloudCoverage: 0.75
+    - _CloudInvert: 1
     - _CloudLitPower: 3.2
     - _CloudRotation: 0
+    - _CloudScale: 7.52
     - _CloudScroll: 0.6
     - _CloudSoftness: 0.18
     - _CloudThickness: 2
+    - _Coverage: 0.62
     - _DebugMask: 0
     - _DetailBlend: 0.65
+    - _EvolveSpeed: 1.46
     - _Exposure: 1.2
+    - _Gain: 0.568
     - _HorizonFade: 0.18
     - _HorizonPower: 2.8
-    - _InBlack: 0.47
+    - _InBlack: 0.34
     - _InWhite: 0.82
+    - _Lacunarity: 3.07
+    - _Layer2Scale: 2.6
+    - _Layer2Speed: 3
+    - _Layer2Weight: 0.45
     - _MaskGamma: 1
+    - _OctaveSpeedBias: 0.6
+    - _Octaves: 3
+    - _PhotoDetail: 0
     - _PlaneCurvature: 0.3
     - _PlaneScale: 0.55
     - _RimIntensity: 0.9
+    - _Sharpness: 0.72
     - _SunDiskIntensity: 8
     - _SunDiskSize: 0.008
     - _SunGlowIntensity: 1.8
     - _SunGlowPower: 64
+    - _UseSceneWind: 1
+    - _WarpScale: 1
+    - _WarpStrength: 0.32
+    - _WindDirection: 45
+    - _WindSpeed: 5.35
     m_Colors:
     - _CloudLitColor: {r: 1.35, g: 0.72, b: 0.38, a: 1}
     - _CloudShadowColor: {r: 0.2, g: 0.17, b: 0.24, a: 1}

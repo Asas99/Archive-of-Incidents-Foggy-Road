@@ -337,11 +337,13 @@ public static class FoggyRoad_KaydetVeKilitle
         if (sky.shader != null && sky.shader.name == "Environment/Sunset Sky With Clouds")
         {
             Debug.Log("  Bulut: invert = " + Mf(sky, "_CloudInvert") +
-                      ", kaplama = " + Mf(sky, "_CloudCoverage") +
-                      ", yumusaklik = " + Mf(sky, "_CloudSoftness") +
-                      ", dagilim = " + Mf(sky, "_DetailBlend") +
-                      ", hiz = " + Mf(sky, "_CloudScroll") +
-                      ", tepe olcek = " + Mf(sky, "_PlaneScale"));
+                      ", kapsama = " + Mf(sky, "_Coverage") +
+                      ", keskinlik = " + Mf(sky, "_Sharpness") +
+                      ", girdap = " + Mf(sky, "_WarpStrength") +
+                      ", olcek = " + Mf(sky, "_CloudScale") +
+                      ", oktav = " + Mf(sky, "_Octaves") +
+                      ", ruzgar hizi = " + Mf(sky, "_WindSpeed") +
+                      ", foto detay = " + Mf(sky, "_PhotoDetail"));
 
             if (sky.HasProperty("_DebugMask") && sky.GetFloat("_DebugMask") > 0.5f)
                 Debug.LogWarning("  DIKKAT: 'Maskeyi goster' ACIK. Gokyuzu siyah-beyaz " +
