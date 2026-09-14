@@ -166,8 +166,8 @@ Material:
     - _ReceiveShadows: 1
     - _ReflectionGain: 1
     - _ReflectionLimit: 0.42
-    - _Roughness: 0.38
-    - _RoughnessMapStrength: 0.36
+    - _Roughness: 0.79
+    - _RoughnessMapStrength: 0.18
     - _RoughnessVariation: 0.253
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
