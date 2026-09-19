@@ -12,24 +12,33 @@ public class CarController : MonoBehaviour
     [SerializeField] private KeyCode enterExitKey = KeyCode.E;
     [SerializeField] private bool showHelpText = true;
 
+    [Header("Camera Look")]
+    [SerializeField] private bool allowMouseLookInCar = true;
+    [SerializeField] private float mouseSensitivity = 120f;
+    [SerializeField] private float minLookPitch = -75f;
+    [SerializeField] private float maxLookPitch = 75f;
+
     [Header("Drive")]
-    [SerializeField] private float acceleration = 45f;
-    [SerializeField] private float reverseAcceleration = 22f;
+    [SerializeField] private float acceleration = 28f;
+    [SerializeField] private float reverseAcceleration = 14f;
     [SerializeField] private float turnStrength = 95f;
-    [SerializeField] private float brakeStrength = 45f;
-    [SerializeField] private float rollingFriction = 0.8f;
+    [SerializeField] private float brakeStrength = 20f;
+    [SerializeField] private float rollingFriction = 1.2f;
     [SerializeField] private float lateralGrip = 5f;
     [SerializeField] private float maxReverseSpeed = 12f;
+    [SerializeField] private float throttleResponsiveness = 2.5f;
 
     [Header("Gear Switching")]
     [SerializeField] private KeyCode gearUpKey = KeyCode.LeftShift;
     [SerializeField] private KeyCode gearDownKey = KeyCode.Q;
+    [SerializeField] private float gearShiftDuration = 0.45f;
+    [SerializeField] private float shiftTorqueMultiplier = 0.25f;
     [SerializeField] private GearSetting[] gears =
     {
-        new GearSetting { name = "1", maxSpeed = 11f, torqueMultiplier = 2f },
-        new GearSetting { name = "2", maxSpeed = 22f, torqueMultiplier = 1.5f },
-        new GearSetting { name = "3", maxSpeed = 34f, torqueMultiplier = 1.15f },
-        new GearSetting { name = "4", maxSpeed = 50f, torqueMultiplier = 0.95f }
+        new GearSetting { name = "1", maxSpeed = 12f, torqueMultiplier = 1.15f },
+        new GearSetting { name = "2", maxSpeed = 22f, torqueMultiplier = 0.95f },
+        new GearSetting { name = "3", maxSpeed = 35f, torqueMultiplier = 0.78f },
+        new GearSetting { name = "4", maxSpeed = 50f, torqueMultiplier = 0.65f }
     };
 
     private readonly List<MonoBehaviour> disabledDriverScripts = new List<MonoBehaviour>();
@@ -37,7 +46,14 @@ public class CarController : MonoBehaviour
     private Rigidbody rb;
     private CharacterController driverController;
     private Transform driverTransform;
+    private Transform driverCamera;
     private Transform originalDriverParent;
+    private Quaternion originalDriverLocalRotation;
+    private Quaternion originalCameraLocalRotation;
+    private float driverLookYaw;
+    private float driverLookPitch;
+    private float smoothedThrottle;
+    private float shiftTimer;
     private int currentGear;
     private string message = "Arabaya yaklas: E ile bin.";
 
@@ -93,17 +109,19 @@ public class CarController : MonoBehaviour
             return;
         }
 
+        UpdateDriverLook();
+
         if (Input.GetKeyDown(gearUpKey))
         {
-            currentGear = Mathf.Min(currentGear + 1, gears.Length - 1);
+            ShiftGear(1);
         }
 
         if (Input.GetKeyDown(gearDownKey))
         {
-            currentGear = Mathf.Max(currentGear - 1, 0);
+            ShiftGear(-1);
         }
 
-        message = $"Suruyorsun | Hiz: {SpeedKmh:0} km/h | Vites: {gears[currentGear].name} | E - in";
+        message = $"Suruyorsun | Hiz: {SpeedKmh:0} km/h | Vites: {gears[currentGear].name} | Fare ile bak | E - in";
     }
 
     private void FixedUpdate()
@@ -118,7 +136,10 @@ public class CarController : MonoBehaviour
         float steering = Input.GetAxis("Horizontal");
         bool brake = Input.GetKey(KeyCode.Space);
 
-        ApplyDrive(throttle);
+        shiftTimer = Mathf.Max(0f, shiftTimer - Time.fixedDeltaTime);
+        smoothedThrottle = Mathf.MoveTowards(smoothedThrottle, throttle, throttleResponsiveness * Time.fixedDeltaTime);
+
+        ApplyDrive(smoothedThrottle);
         ApplySteering(steering);
         ApplyLateralGrip();
 
@@ -179,6 +200,11 @@ public class CarController : MonoBehaviour
         driverController = character;
         driverTransform = character.transform;
         originalDriverParent = driverTransform.parent;
+        originalDriverLocalRotation = driverTransform.localRotation;
+        driverCamera = FindDriverCamera(driverTransform);
+        originalCameraLocalRotation = driverCamera != null ? driverCamera.localRotation : Quaternion.identity;
+        driverLookYaw = 0f;
+        driverLookPitch = 0f;
 
         disabledDriverScripts.Clear();
         disabledDriverColliders.Clear();
@@ -204,13 +230,19 @@ public class CarController : MonoBehaviour
         driverTransform.SetParent(transform, true);
         driverTransform.SetPositionAndRotation(seatPoint.position, seatPoint.rotation);
         Physics.SyncTransforms();
-        message = "Arabaya bindin. WASD sur, Space fren, Shift/Q vites, E in.";
+        message = "Arabaya bindin. Fare ile bak, WASD sur, Space fren, Shift/Q vites, E in.";
     }
 
     private void ExitCar()
     {
+        if (driverCamera != null)
+        {
+            driverCamera.localRotation = originalCameraLocalRotation;
+        }
+
         driverTransform.SetParent(originalDriverParent, true);
         driverTransform.SetPositionAndRotation(exitPoint.position, Quaternion.Euler(0f, transform.eulerAngles.y, 0f));
+        driverTransform.localRotation = originalDriverLocalRotation;
         Physics.SyncTransforms();
 
         foreach (Collider driverCollider in disabledDriverColliders)
@@ -234,8 +266,57 @@ public class CarController : MonoBehaviour
         disabledDriverColliders.Clear();
         driverController = null;
         driverTransform = null;
+        driverCamera = null;
         originalDriverParent = null;
+        smoothedThrottle = 0f;
+        shiftTimer = 0f;
         message = "Arabadan indin.";
+    }
+
+    private void ShiftGear(int direction)
+    {
+        int nextGear = Mathf.Clamp(currentGear + direction, 0, gears.Length - 1);
+        if (nextGear == currentGear)
+        {
+            return;
+        }
+
+        currentGear = nextGear;
+        shiftTimer = gearShiftDuration;
+        smoothedThrottle = Mathf.Min(smoothedThrottle, 0.25f);
+    }
+
+    private Transform FindDriverCamera(Transform driver)
+    {
+        Camera cameraInDriver = driver.GetComponentInChildren<Camera>(true);
+        if (cameraInDriver != null)
+        {
+            return cameraInDriver.transform;
+        }
+
+        Camera mainCamera = Camera.main;
+        return mainCamera != null ? mainCamera.transform : null;
+    }
+
+    private void UpdateDriverLook()
+    {
+        if (!allowMouseLookInCar || driverTransform == null)
+        {
+            return;
+        }
+
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+
+        driverLookYaw += mouseX;
+        driverLookPitch = Mathf.Clamp(driverLookPitch - mouseY, minLookPitch, maxLookPitch);
+
+        driverTransform.localRotation = Quaternion.Euler(0f, driverLookYaw, 0f);
+
+        if (driverCamera != null)
+        {
+            driverCamera.localRotation = Quaternion.Euler(driverLookPitch, 0f, 0f);
+        }
     }
 
     private void ApplyDrive(float throttle)
@@ -245,7 +326,11 @@ public class CarController : MonoBehaviour
 
         if (throttle > 0f && forwardSpeed < gear.maxSpeed)
         {
-            rb.AddForce(transform.forward * throttle * acceleration * gear.torqueMultiplier, ForceMode.Acceleration);
+            float speedRatio = Mathf.InverseLerp(gear.maxSpeed * 0.55f, gear.maxSpeed, Mathf.Max(0f, forwardSpeed));
+            float torqueFalloff = Mathf.Lerp(1f, 0.15f, speedRatio);
+            float shiftFactor = shiftTimer > 0f ? shiftTorqueMultiplier : 1f;
+            float driveForce = throttle * acceleration * gear.torqueMultiplier * torqueFalloff * shiftFactor;
+            rb.AddForce(transform.forward * driveForce, ForceMode.Acceleration);
         }
         else if (throttle < 0f && forwardSpeed > -maxReverseSpeed)
         {
@@ -287,7 +372,7 @@ public class CarController : MonoBehaviour
         }
 
         GUI.Box(new Rect(20f, 20f, 470f, 78f), message);
-        GUI.Label(new Rect(32f, 50f, 440f, 24f), "Kontrol: W/S gaz-geri, A/D donus, Space fren, Shift/Q vites");
+        GUI.Label(new Rect(32f, 50f, 440f, 24f), "Kontrol: Mouse bakis, W/S gaz-geri, A/D donus, Space fren, Shift/Q vites");
     }
 
     [System.Serializable]
