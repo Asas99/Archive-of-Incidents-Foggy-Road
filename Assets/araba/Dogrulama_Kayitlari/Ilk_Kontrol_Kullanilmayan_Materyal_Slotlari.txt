@@ -1,0 +1,2 @@
+System.Exception: Material slot mismatch: Mesh_0.015
+  at ExportCar.Run () [0x0047b] in C:\Users\Gireb\AppData\Local\Temp\ArabaUnityExport_20260920\Assets\Editor\ExportCar.cs:67 

@@ -1,0 +1,11 @@
+Unity 6000.0.67f1 / URP 17.0.4
+Mesh objects: 31
+Materials: 34
+Triangles: 4320013
+Texture references: all resolved
+Missing material slots: 0
+
+URP Lit render: verified visually in Linear color space.
+FBX UV round-trip: 14705 matched samples, 0 differing UV samples (109 positions excluded by rounding).
+Package: 123 assets, 34 materials, 83 texture files, 1 FBX, 1 prefab; all required textures present.
+

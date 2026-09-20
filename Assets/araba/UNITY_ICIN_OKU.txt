@@ -1,0 +1,37 @@
+ARABA - TAM SAHNE / UNITY URP
+
+ÖNERİLEN AKTARIM
+1. Unity projenizi açın.
+2. Assets > Import Package > Custom Package menüsünden
+   Araba_Tam_Sahne_URP.unitypackage dosyasını seçin ve Import yapın.
+3. Assets/Araba_Unity/Araba_Sahne.prefab dosyasını sahneye sürükleyin.
+
+ALTERNATİF
+Araba_Unity klasörünü bütünüyle Unity projenizin Assets klasörüne kopyalayabilirsiniz.
+.meta dosyalarını da birlikte taşıyın; materyal ve doku bağlantılarını bunlar korur.
+Sadece FBX dosyasını taşımayın.
+
+İÇERİK
+- Araba, iç parçaları ve zemin dahil 31 mesh obje.
+- Objelere atanmış 34 URP Lit materyali.
+- Kaynak renk, normal, metallic ve roughness dokuları.
+- Unity için üretilmiş MetallicSmoothness haritaları: R = metallic, A = 1 - roughness.
+- Camların kaynak alpha ve roughness değerleriyle hazırlanmış saydam materyalleri.
+- Objeleri ve konumlarını koruyan Araba_Sahne.fbx ve hazır prefab.
+- ArabaManifest.json: kaynak obje, materyal ve doku eşleşmeleri.
+
+NOTLAR
+Paket mevcut projenizdeki URP için hazırlanmıştır. HDRP veya Built-in projelerinde
+materyal shader'ları ayrıca dönüştürülmelidir.
+Blender Material Preview ışığı Unity sahnesine aktarılmaz. Görünümün tonu,
+parlaklığı ve yansımaları Unity'deki ışık, ortam ve reflection probe ayarlarına
+bağlıdır; materyallerin ve dokuların taşınması piksel piksel aynı aydınlatmayı sağlamaz.
+Modelin detayları azaltılmadı; yüksek poligonlu kaynak geometri korunmuştur.
+Kök klasördeki eski arabablend.fbx önceki dışa aktarımdır. Yeni aktarım için
+Araba_Tam_Sahne_URP.unitypackage veya Araba_Unity klasörünü kullanın.
+Doku_Uzanti_Yedekleri eski uzantıyla çıkarılmış üç dosyanın yedeğidir; pakete gerekmez.
+
+RENK UZAYI
+Unity Player Settings > Other Settings > Rendering > Color Space: Linear kullanın.
+Unity_Onizleme.png, Linear renk uzayında URP Lit materyalleriyle Unity'den alınmıştır.
+
