@@ -8,7 +8,7 @@ public class CarController : MonoBehaviour
     [Header("Enter / Exit")]
     [SerializeField] private Transform seatPoint;
     [SerializeField] private Transform exitPoint;
-    [SerializeField] private float enterDistance = 5f;
+    [SerializeField] private float enterDistance = 10f;
     [SerializeField] private KeyCode enterExitKey = KeyCode.E;
     [SerializeField] private bool showHelpText = true;
 
@@ -19,6 +19,8 @@ public class CarController : MonoBehaviour
     [SerializeField] private float maxLookPitch = 75f;
 
     [Header("Drive")]
+    [Tooltip("Araba modeli yerel X ekseni boyunca uzanıyorsa W/S bu eksende ilerler.")]
+    [SerializeField] private bool useLocalXAxisForForward = false;
     [SerializeField] private float acceleration = 28f;
     [SerializeField] private float reverseAcceleration = 14f;
     [SerializeField] private float turnStrength = 95f;
@@ -44,6 +46,7 @@ public class CarController : MonoBehaviour
     private readonly List<MonoBehaviour> disabledDriverScripts = new List<MonoBehaviour>();
     private readonly List<Collider> disabledDriverColliders = new List<Collider>();
     private Rigidbody rb;
+    private Collider vehicleCollider;
     private CharacterController driverController;
     private Transform driverTransform;
     private Transform driverCamera;
@@ -59,13 +62,20 @@ public class CarController : MonoBehaviour
 
     private bool HasDriver => driverController != null;
     private float SpeedKmh => rb.linearVelocity.magnitude * 3.6f;
+    private Vector3 DriveForward => useLocalXAxisForForward ? transform.right : transform.forward;
+    private Vector3 DriveLateral => useLocalXAxisForForward ? transform.forward : transform.right;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        vehicleCollider = GetComponent<Collider>();
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.centerOfMass = new Vector3(0f, -0.55f, 0f);
+        // This controller steers with MoveRotation around Y.  Lock pitch and roll so a
+        // road contact cannot tip the long visual model backwards or sideways.
+        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        rb.angularDamping = Mathf.Max(rb.angularDamping, 5f);
 
         if (seatPoint == null)
         {
@@ -173,6 +183,11 @@ public class CarController : MonoBehaviour
 
     private CharacterController FindNearestCharacter(out float nearestDistance)
     {
+        if (vehicleCollider == null)
+        {
+            vehicleCollider = GetComponent<Collider>();
+        }
+
         CharacterController[] controllers = FindObjectsByType<CharacterController>(FindObjectsSortMode.None);
         CharacterController nearest = null;
         nearestDistance = float.MaxValue;
@@ -184,7 +199,10 @@ public class CarController : MonoBehaviour
                 continue;
             }
 
-            float distance = Vector3.Distance(transform.position, controller.transform.position);
+            Vector3 nearestVehiclePoint = vehicleCollider != null
+                ? vehicleCollider.ClosestPoint(controller.transform.position)
+                : transform.position;
+            float distance = Vector3.Distance(nearestVehiclePoint, controller.transform.position);
             if (distance < nearestDistance)
             {
                 nearest = controller;
@@ -321,7 +339,7 @@ public class CarController : MonoBehaviour
 
     private void ApplyDrive(float throttle)
     {
-        float forwardSpeed = Vector3.Dot(rb.linearVelocity, transform.forward);
+        float forwardSpeed = Vector3.Dot(rb.linearVelocity, DriveForward);
         GearSetting gear = gears[currentGear];
 
         if (throttle > 0f && forwardSpeed < gear.maxSpeed)
@@ -330,17 +348,18 @@ public class CarController : MonoBehaviour
             float torqueFalloff = Mathf.Lerp(1f, 0.15f, speedRatio);
             float shiftFactor = shiftTimer > 0f ? shiftTorqueMultiplier : 1f;
             float driveForce = throttle * acceleration * gear.torqueMultiplier * torqueFalloff * shiftFactor;
-            rb.AddForce(transform.forward * driveForce, ForceMode.Acceleration);
+            rb.AddForce(DriveForward * driveForce, ForceMode.Acceleration);
         }
         else if (throttle < 0f && forwardSpeed > -maxReverseSpeed)
         {
-            rb.AddForce(transform.forward * throttle * reverseAcceleration, ForceMode.Acceleration);
+            rb.AddForce(DriveForward * throttle * reverseAcceleration, ForceMode.Acceleration);
         }
     }
 
     private void ApplySteering(float steering)
     {
-        float speedFactor = Mathf.Clamp01(rb.linearVelocity.magnitude / 2f);
+        // A small minimum lets A/D visibly steer the parked vehicle too.
+        float speedFactor = Mathf.Max(0.15f, Mathf.Clamp01(rb.linearVelocity.magnitude / 2f));
         Quaternion turn = Quaternion.Euler(0f, steering * turnStrength * speedFactor * Time.fixedDeltaTime, 0f);
         rb.MoveRotation(rb.rotation * turn);
     }
@@ -359,9 +378,8 @@ public class CarController : MonoBehaviour
 
     private void ApplyLateralGrip()
     {
-        Vector3 localVelocity = transform.InverseTransformDirection(rb.linearVelocity);
-        Vector3 sideVelocity = transform.right * localVelocity.x;
-        rb.AddForce(-sideVelocity * lateralGrip, ForceMode.Acceleration);
+        float lateralSpeed = Vector3.Dot(rb.linearVelocity, DriveLateral);
+        rb.AddForce(-DriveLateral * lateralSpeed * lateralGrip, ForceMode.Acceleration);
     }
 
     private void OnGUI()
