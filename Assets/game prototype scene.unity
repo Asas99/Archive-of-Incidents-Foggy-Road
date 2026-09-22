@@ -9241,7 +9241,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1695732642112822603, guid: bdcdff545909be249b8bc9a06f025044, type: 3}
       propertyPath: m_Name
-      value: npcaraba4
+      value: npcaraba4LOD1
       objectReference: {fileID: 0}
     - target: {fileID: 2072679981218727921, guid: bdcdff545909be249b8bc9a06f025044, type: 3}
       propertyPath: m_LocalScale.x
@@ -18511,7 +18511,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7780733667881648231, guid: c4ebd9b4fe2615b42ab68631ca54ade4, type: 3}
       propertyPath: m_Name
-      value: npcaraba4 (1)
+      value: npcaraba4LOD2
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
