@@ -1,0 +1,12 @@
+{
+  "name": "FoggyRoad.Tests",
+  "references": [
+    "FoggyRoad.Driving"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"],
+  "autoReferenced": false
+}

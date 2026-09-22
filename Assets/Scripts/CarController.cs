@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FoggyRoad.Driving;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -29,6 +30,15 @@ public class CarController : MonoBehaviour
     [SerializeField] private float lateralGrip = 5f;
     [SerializeField] private float maxReverseSpeed = 12f;
     [SerializeField] private float throttleResponsiveness = 2.5f;
+    [SerializeField] private float steeringTurnSpeed = 110f;
+    [SerializeField, Range(1f, 45f)] private float maxSteeringAngle = 32f;
+    [SerializeField] private float parkedTurnStrength = 35f;
+
+    [Header("Steering Visuals")]
+    [SerializeField] private Transform steeringWheelVisual;
+    [SerializeField] private Transform frontLeftWheelVisual;
+    [SerializeField] private Transform frontRightWheelVisual;
+    [SerializeField] private float steeringWheelRotationMultiplier = 12f;
 
     [Header("Gear Switching")]
     [SerializeField] private KeyCode gearUpKey = KeyCode.LeftShift;
@@ -37,10 +47,10 @@ public class CarController : MonoBehaviour
     [SerializeField] private float shiftTorqueMultiplier = 0.25f;
     [SerializeField] private GearSetting[] gears =
     {
-        new GearSetting { name = "1", maxSpeed = 12f, torqueMultiplier = 1.15f },
-        new GearSetting { name = "2", maxSpeed = 22f, torqueMultiplier = 0.95f },
-        new GearSetting { name = "3", maxSpeed = 35f, torqueMultiplier = 0.78f },
-        new GearSetting { name = "4", maxSpeed = 50f, torqueMultiplier = 0.65f }
+        new GearSetting { name = "1", minDriveSpeed = 0f, maxSpeed = 12f, torqueMultiplier = 1.15f },
+        new GearSetting { name = "2", minDriveSpeed = 9.5f, maxSpeed = 22f, torqueMultiplier = 0.95f },
+        new GearSetting { name = "3", minDriveSpeed = 19f, maxSpeed = 35f, torqueMultiplier = 0.78f },
+        new GearSetting { name = "4", minDriveSpeed = 30f, maxSpeed = 50f, torqueMultiplier = 0.65f }
     };
 
     private readonly List<MonoBehaviour> disabledDriverScripts = new List<MonoBehaviour>();
@@ -56,9 +66,14 @@ public class CarController : MonoBehaviour
     private float driverLookYaw;
     private float driverLookPitch;
     private float smoothedThrottle;
+    private float steeringAngle;
     private float shiftTimer;
-    private int currentGear;
+    // -1 = reverse, 0 = neutral, 1..N = forward gears.
+    private int currentGear = 1;
     private string message = "Arabaya yaklas: E ile bin.";
+    private Quaternion steeringWheelBaseRotation;
+    private Quaternion frontLeftWheelBaseRotation;
+    private Quaternion frontRightWheelBaseRotation;
 
     private bool HasDriver => driverController != null;
     private float SpeedKmh => rb.linearVelocity.magnitude * 3.6f;
@@ -76,6 +91,8 @@ public class CarController : MonoBehaviour
         // road contact cannot tip the long visual model backwards or sideways.
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         rb.angularDamping = Mathf.Max(rb.angularDamping, 5f);
+        ApplyLegacyGearDefaults();
+        CacheSteeringVisuals();
 
         if (seatPoint == null)
         {
@@ -131,7 +148,7 @@ public class CarController : MonoBehaviour
             ShiftGear(-1);
         }
 
-        message = $"Suruyorsun | Hiz: {SpeedKmh:0} km/h | Vites: {gears[currentGear].name} | Fare ile bak | E - in";
+        message = $"Suruyorsun | Hiz: {SpeedKmh:0} km/h | Vites: {CurrentGearName} | Direksiyon: {steeringAngle:0}° | {DriveHint} | Fare ile bak | E - in";
     }
 
     private void FixedUpdate()
@@ -142,22 +159,31 @@ public class CarController : MonoBehaviour
             return;
         }
 
-        float throttle = Input.GetAxis("Vertical");
-        float steering = Input.GetAxis("Horizontal");
+        float throttle = GetThrottleInput();
+        float steering = GetSteeringInput();
         bool brake = Input.GetKey(KeyCode.Space);
 
         shiftTimer = Mathf.Max(0f, shiftTimer - Time.fixedDeltaTime);
         smoothedThrottle = Mathf.MoveTowards(smoothedThrottle, throttle, throttleResponsiveness * Time.fixedDeltaTime);
+        steeringAngle = ManualTransmissionRules.UpdateSteeringAngle(
+            steeringAngle,
+            steering,
+            steeringTurnSpeed,
+            maxSteeringAngle,
+            Time.fixedDeltaTime);
+        ApplySteeringVisuals();
 
         ApplyDrive(smoothedThrottle);
-        ApplySteering(steering);
+        ApplySteering();
         ApplyLateralGrip();
 
-        if (brake)
+        float forwardSpeed = Vector3.Dot(rb.linearVelocity, DriveForward);
+        bool brakingWithReverseKey = throttle < -0.05f && currentGear != -1 && forwardSpeed > 0.2f;
+        if (brake || brakingWithReverseKey)
         {
             ApplyBrake();
         }
-        else if (Mathf.Abs(throttle) < 0.05f)
+        else if (Mathf.Abs(throttle) < 0.05f || (throttle < -0.05f && currentGear != -1))
         {
             ApplyRollingFriction();
         }
@@ -248,7 +274,7 @@ public class CarController : MonoBehaviour
         driverTransform.SetParent(transform, true);
         driverTransform.SetPositionAndRotation(seatPoint.position, seatPoint.rotation);
         Physics.SyncTransforms();
-        message = "Arabaya bindin. Fare ile bak, WASD sur, Space fren, Shift/Q vites, E in.";
+        message = "Arabaya bindin. W gaz, S fren; geri icin Q ile R vitesine in. Shift/Q vites, E in.";
     }
 
     private void ExitCar()
@@ -293,7 +319,7 @@ public class CarController : MonoBehaviour
 
     private void ShiftGear(int direction)
     {
-        int nextGear = Mathf.Clamp(currentGear + direction, 0, gears.Length - 1);
+        int nextGear = Mathf.Clamp(currentGear + direction, -1, gears.Length);
         if (nextGear == currentGear)
         {
             return;
@@ -340,28 +366,152 @@ public class CarController : MonoBehaviour
     private void ApplyDrive(float throttle)
     {
         float forwardSpeed = Vector3.Dot(rb.linearVelocity, DriveForward);
-        GearSetting gear = gears[currentGear];
 
-        if (throttle > 0f && forwardSpeed < gear.maxSpeed)
+        if (throttle > 0.05f && currentGear > 0)
         {
+            GearSetting gear = gears[currentGear - 1];
+            if (!ManualTransmissionRules.IsForwardGearSpeedValid(forwardSpeed, gear.minDriveSpeed, gear.maxSpeed))
+            {
+                return;
+            }
+
             float speedRatio = Mathf.InverseLerp(gear.maxSpeed * 0.55f, gear.maxSpeed, Mathf.Max(0f, forwardSpeed));
             float torqueFalloff = Mathf.Lerp(1f, 0.15f, speedRatio);
             float shiftFactor = shiftTimer > 0f ? shiftTorqueMultiplier : 1f;
             float driveForce = throttle * acceleration * gear.torqueMultiplier * torqueFalloff * shiftFactor;
             rb.AddForce(DriveForward * driveForce, ForceMode.Acceleration);
         }
-        else if (throttle < 0f && forwardSpeed > -maxReverseSpeed)
+        else if (throttle < -0.05f && currentGear == -1 && forwardSpeed > -maxReverseSpeed)
         {
             rb.AddForce(DriveForward * throttle * reverseAcceleration, ForceMode.Acceleration);
         }
     }
 
-    private void ApplySteering(float steering)
+    private float GetThrottleInput()
     {
-        // A small minimum lets A/D visibly steer the parked vehicle too.
-        float speedFactor = Mathf.Max(0.15f, Mathf.Clamp01(rb.linearVelocity.magnitude / 2f));
-        Quaternion turn = Quaternion.Euler(0f, steering * turnStrength * speedFactor * Time.fixedDeltaTime, 0f);
+        return ManualTransmissionRules.ResolveDigitalAxis(
+            Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow),
+            Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow),
+            Input.GetAxisRaw("Vertical"));
+    }
+
+    private float GetSteeringInput()
+    {
+        return ManualTransmissionRules.ResolveDigitalAxis(
+            Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow),
+            Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow),
+            Input.GetAxisRaw("Horizontal"));
+    }
+
+    private void ApplyLegacyGearDefaults()
+    {
+        for (int gearIndex = 1; gearIndex < gears.Length; gearIndex++)
+        {
+            if (gears[gearIndex].minDriveSpeed > 0.01f)
+            {
+                continue;
+            }
+
+            GearSetting gear = gears[gearIndex];
+            gear.minDriveSpeed = ManualTransmissionRules.GetDefaultMinimumDriveSpeed(gearIndex, gear.maxSpeed);
+            gears[gearIndex] = gear;
+        }
+    }
+
+    private void ApplySteering()
+    {
+        if (Mathf.Abs(steeringAngle) < 0.01f)
+        {
+            return;
+        }
+
+        float forwardSpeed = Vector3.Dot(rb.linearVelocity, DriveForward);
+        float effectiveTurnStrength = ManualTransmissionRules.GetTurnStrength(forwardSpeed, parkedTurnStrength, turnStrength, 4f);
+        if (effectiveTurnStrength <= 0f)
+        {
+            return;
+        }
+
+        float reverseSteering = ManualTransmissionRules.GetSteeringDirection(forwardSpeed);
+        float steeringRatio = steeringAngle / maxSteeringAngle;
+        Quaternion turn = Quaternion.Euler(0f, steeringRatio * reverseSteering * effectiveTurnStrength * Time.fixedDeltaTime, 0f);
         rb.MoveRotation(rb.rotation * turn);
+    }
+
+    private void CacheSteeringVisuals()
+    {
+        steeringWheelVisual ??= transform.Find("Araba_Sahne_Model/Mesh_0.029");
+        frontLeftWheelVisual ??= transform.Find("Araba_Sahne_Model/Mesh_0.025");
+        frontRightWheelVisual ??= transform.Find("Araba_Sahne_Model/Mesh_0.028");
+
+        if (steeringWheelVisual != null)
+        {
+            steeringWheelBaseRotation = steeringWheelVisual.localRotation;
+        }
+
+        if (frontLeftWheelVisual != null)
+        {
+            frontLeftWheelBaseRotation = frontLeftWheelVisual.localRotation;
+        }
+
+        if (frontRightWheelVisual != null)
+        {
+            frontRightWheelBaseRotation = frontRightWheelVisual.localRotation;
+        }
+    }
+
+    private void ApplySteeringVisuals()
+    {
+        float steeringWheelAngle = ManualTransmissionRules.GetSteeringWheelVisualAngle(
+            steeringAngle,
+            steeringWheelRotationMultiplier);
+
+        if (steeringWheelVisual != null)
+        {
+            steeringWheelVisual.localRotation = steeringWheelBaseRotation * Quaternion.Euler(0f, steeringWheelAngle, 0f);
+        }
+
+        if (frontLeftWheelVisual != null)
+        {
+            frontLeftWheelVisual.localRotation = frontLeftWheelBaseRotation * Quaternion.Euler(0f, 0f, steeringAngle);
+        }
+
+        if (frontRightWheelVisual != null)
+        {
+            frontRightWheelVisual.localRotation = frontRightWheelBaseRotation * Quaternion.Euler(0f, 0f, steeringAngle);
+        }
+    }
+
+    private string CurrentGearName => currentGear switch
+    {
+        -1 => "R",
+        0 => "N",
+        _ => gears[currentGear - 1].name
+    };
+
+    private string DriveHint
+    {
+        get
+        {
+            if (currentGear == -1)
+            {
+                return "Geri vites: S ile geri git";
+            }
+
+            if (currentGear == 0)
+            {
+                return "Bos vites: hareket icin Shift ile 1. vitese al";
+            }
+
+            GearSetting gear = gears[currentGear - 1];
+            float forwardSpeed = Vector3.Dot(rb.linearVelocity, DriveForward);
+            if (forwardSpeed < gear.minDriveSpeed)
+            {
+                return $"{gear.name}. vites bu hizda cekmez - Q ile vites kucult";
+            }
+
+            return "A/D direksiyon | S fren";
+        }
     }
 
     private void ApplyBrake()
@@ -389,14 +539,16 @@ public class CarController : MonoBehaviour
             return;
         }
 
-        GUI.Box(new Rect(20f, 20f, 470f, 78f), message);
-        GUI.Label(new Rect(32f, 50f, 440f, 24f), "Kontrol: Mouse bakis, W/S gaz-geri, A/D donus, Space fren, Shift/Q vites");
+        GUI.Box(new Rect(20f, 20f, 600f, 78f), message);
+        GUI.Label(new Rect(32f, 50f, 560f, 24f), "Kontrol: Mouse bakis, W gaz, S fren / R'de geri, A/D donus, Space fren, Shift/Q vites");
     }
 
     [System.Serializable]
     private struct GearSetting
     {
         public string name;
+        [Tooltip("Bu vitesin cekis vermeye basladigi minimum ileri hiz (m/s).")]
+        public float minDriveSpeed;
         public float maxSpeed;
         public float torqueMultiplier;
     }
