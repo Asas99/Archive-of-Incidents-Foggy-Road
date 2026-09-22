@@ -40,6 +40,34 @@ public class CarController : MonoBehaviour
     [SerializeField] private Transform frontRightWheelVisual;
     [SerializeField] private float steeringWheelRotationMultiplier = 12f;
 
+    [Header("Speedometer Visual")]
+    [Tooltip("Speedometer needle's pivot. Defaults to the 'gösterge holder' object.")]
+    [SerializeField] private Transform speedometerHolder;
+    [SerializeField, Min(0f)] private float speedometerMinimumKmh = 0f;
+    [SerializeField, Min(0.01f)] private float speedometerMaximumKmh = 120f;
+    [Tooltip("Needle Y rotation at minimum speed.")]
+    [SerializeField] private float speedometerMinimumAngleY = 128f;
+    [Tooltip("How many km/h each needle-angle step represents.")]
+    [SerializeField, Min(0.01f)] private float speedometerKmhPerAngleStep = 20f;
+    [Tooltip("Needle Y rotation added for each speed step. Use a negative value to reverse its direction.")]
+    [SerializeField] private float speedometerDegreesPerStep = -24f;
+    [Tooltip("Needle rotation speed in degrees per second. Set to 0 for an instant update.")]
+    [SerializeField, Min(0f)] private float speedometerRotationSpeed = 360f;
+
+    [Header("Suspension")]
+    [SerializeField] private bool suspensionEnabled = true;
+    [Tooltip("Raycast origins. They default to the four wheel visuals if left empty.")]
+    [SerializeField] private Transform frontLeftSuspensionPoint;
+    [SerializeField] private Transform frontRightSuspensionPoint;
+    [SerializeField] private Transform rearLeftSuspensionPoint;
+    [SerializeField] private Transform rearRightSuspensionPoint;
+    [SerializeField, Min(0.01f)] private float suspensionRestLength = 0.42f;
+    [SerializeField, Min(0f)] private float suspensionTravel = 0.18f;
+    [SerializeField, Min(0f)] private float wheelRadius = 0.32f;
+    [SerializeField, Min(0f)] private float suspensionSpringStrength = 35000f;
+    [SerializeField, Min(0f)] private float suspensionDamperStrength = 4500f;
+    [SerializeField] private LayerMask suspensionGroundLayers = Physics.DefaultRaycastLayers;
+
     [Header("Gear Switching")]
     [SerializeField] private KeyCode gearUpKey = KeyCode.LeftShift;
     [SerializeField] private KeyCode gearDownKey = KeyCode.Q;
@@ -95,6 +123,7 @@ public class CarController : MonoBehaviour
         rb.angularDamping = Mathf.Max(rb.angularDamping, 5f);
         ApplyLegacyGearDefaults();
         CacheSteeringVisuals();
+        CacheSuspensionPoints();
 
         if (seatPoint == null)
         {
@@ -127,6 +156,8 @@ public class CarController : MonoBehaviour
             }
         }
 
+        UpdateSpeedometerVisual();
+
         if (!HasDriver)
         {
             CharacterController nearest = FindNearestCharacter(out float distance);
@@ -155,6 +186,8 @@ public class CarController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        ApplySuspension();
+
         if (!HasDriver)
         {
             ApplyRollingFriction();
@@ -442,19 +475,17 @@ public class CarController : MonoBehaviour
 
     private void CacheSteeringVisuals()
     {
-        steeringWheelVisual ??= transform.Find("Araba_Sahne_Model/Mesh_0.029");
+        steeringWheelVisual ??= transform.Find("Araba_Sahne_Model/Mesh_0.029/direksiyon holder");
         frontLeftWheelVisual ??= transform.Find("Araba_Sahne_Model/Mesh_0.025");
         frontRightWheelVisual ??= transform.Find("Araba_Sahne_Model/Mesh_0.028");
+        speedometerHolder ??= transform.Find("Araba_Sahne_Model/Mesh_0.018/gösterge holder");
 
         if (steeringWheelVisual != null)
         {
             steeringWheelBasePosition = steeringWheelVisual.localPosition;
             steeringWheelBaseRotation = steeringWheelVisual.localRotation;
 
-            MeshFilter steeringWheelMesh = steeringWheelVisual.GetComponent<MeshFilter>();
-            steeringWheelPivotOffset = steeringWheelMesh != null && steeringWheelMesh.sharedMesh != null
-                ? Vector3.Scale(steeringWheelMesh.sharedMesh.bounds.center, steeringWheelVisual.localScale)
-                : Vector3.zero;
+            steeringWheelPivotOffset = Vector3.zero;
         }
 
         if (frontLeftWheelVisual != null)
@@ -466,6 +497,79 @@ public class CarController : MonoBehaviour
         {
             frontRightWheelBaseRotation = frontRightWheelVisual.localRotation;
         }
+
+    }
+
+    private void CacheSuspensionPoints()
+    {
+        frontLeftSuspensionPoint ??= frontLeftWheelVisual;
+        frontRightSuspensionPoint ??= frontRightWheelVisual;
+        rearLeftSuspensionPoint ??= transform.Find("Araba_Sahne_Model/Mesh_0.026");
+        rearRightSuspensionPoint ??= transform.Find("Araba_Sahne_Model/Mesh_0.027");
+    }
+
+    private void ApplySuspension()
+    {
+        if (!suspensionEnabled)
+        {
+            return;
+        }
+
+        ApplySuspensionAt(frontLeftSuspensionPoint);
+        ApplySuspensionAt(frontRightSuspensionPoint);
+        ApplySuspensionAt(rearLeftSuspensionPoint);
+        ApplySuspensionAt(rearRightSuspensionPoint);
+    }
+
+    private void ApplySuspensionAt(Transform suspensionPoint)
+    {
+        if (suspensionPoint == null)
+        {
+            return;
+        }
+
+        Vector3 suspensionDirection = -transform.up;
+        float rayLength = suspensionRestLength + suspensionTravel + wheelRadius;
+        RaycastHit[] hits = Physics.RaycastAll(
+            suspensionPoint.position,
+            suspensionDirection,
+            rayLength,
+            suspensionGroundLayers,
+            QueryTriggerInteraction.Ignore);
+
+        RaycastHit nearestHit = default;
+        bool foundGround = false;
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider == vehicleCollider || hit.rigidbody == rb)
+            {
+                continue;
+            }
+
+            if (!foundGround || hit.distance < nearestHit.distance)
+            {
+                nearestHit = hit;
+                foundGround = true;
+            }
+        }
+
+        if (!foundGround)
+        {
+            return;
+        }
+
+        float currentLength = Mathf.Clamp(
+            nearestHit.distance - wheelRadius,
+            suspensionRestLength - suspensionTravel,
+            suspensionRestLength);
+        float compression = suspensionRestLength - currentLength;
+        float velocityAlongSpring = Vector3.Dot(rb.GetPointVelocity(suspensionPoint.position), transform.up);
+        float force = compression * suspensionSpringStrength - velocityAlongSpring * suspensionDamperStrength;
+
+        if (force > 0f)
+        {
+            rb.AddForceAtPosition(transform.up * force, suspensionPoint.position, ForceMode.Force);
+        }
     }
 
     private void ApplySteeringVisuals()
@@ -476,12 +580,9 @@ public class CarController : MonoBehaviour
 
         if (steeringWheelVisual != null)
         {
-            // Mesh_0.029 is modeled with its steering-column axis on local Y.
-            Quaternion wheelRotation = steeringWheelBaseRotation * Quaternion.AngleAxis(steeringWheelAngle, Vector3.up);
-            Vector3 pivotInParent = steeringWheelBasePosition + steeringWheelBaseRotation * steeringWheelPivotOffset;
-
+            // Rotate around the steering wheel's fixed local forward axis.
+            Quaternion wheelRotation = steeringWheelBaseRotation * Quaternion.Euler(0f, 0f, steeringWheelAngle);
             steeringWheelVisual.localRotation = wheelRotation;
-            steeringWheelVisual.localPosition = pivotInParent - wheelRotation * steeringWheelPivotOffset;
         }
 
         if (frontLeftWheelVisual != null)
@@ -493,6 +594,27 @@ public class CarController : MonoBehaviour
         {
             frontRightWheelVisual.localRotation = frontRightWheelBaseRotation * Quaternion.Euler(0f, 0f, steeringAngle);
         }
+    }
+
+    private void UpdateSpeedometerVisual()
+    {
+        if (speedometerHolder == null)
+        {
+            return;
+        }
+
+        float maximumKmh = Mathf.Max(speedometerMinimumKmh + 0.01f, speedometerMaximumKmh);
+        float clampedSpeed = Mathf.Clamp(SpeedKmh, speedometerMinimumKmh, maximumKmh);
+        float targetAngleY = speedometerMinimumAngleY
+            + (clampedSpeed - speedometerMinimumKmh) / speedometerKmhPerAngleStep * speedometerDegreesPerStep;
+        Quaternion targetRotation = Quaternion.Euler(0f, targetAngleY, 0f);
+
+        speedometerHolder.localRotation = speedometerRotationSpeed <= 0f
+            ? targetRotation
+            : Quaternion.RotateTowards(
+                speedometerHolder.localRotation,
+                targetRotation,
+                speedometerRotationSpeed * Time.deltaTime);
     }
 
     private string CurrentGearName => currentGear switch
