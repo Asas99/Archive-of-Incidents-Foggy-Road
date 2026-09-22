@@ -153,27 +153,27 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: cam
-    second: {fileID: 2100000, guid: 72ee029870eee7344be21080a179781f, type: 2}
+    second: {fileID: 2100000, guid: 57e2704a234c74046973a532a314f3b6, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: cam.001
-    second: {fileID: 2100000, guid: faf81a9f878c2574f9c9a4cd67107fa7, type: 2}
+    second: {fileID: 2100000, guid: 57e2704a234c74046973a532a314f3b6, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: cam.002
-    second: {fileID: 2100000, guid: ea5ae50d99246244bae9d0a8cf700afe, type: 2}
+    second: {fileID: 2100000, guid: 57e2704a234c74046973a532a314f3b6, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: cam.003
-    second: {fileID: 2100000, guid: 961611c7a166f0e478917b121dc22c4b, type: 2}
+    second: {fileID: 2100000, guid: 57e2704a234c74046973a532a314f3b6, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: cam.004
-    second: {fileID: 2100000, guid: e401b522e1755b64985bd389b9a63017, type: 2}
+    second: {fileID: 2100000, guid: 57e2704a234c74046973a532a314f3b6, type: 2}
   materials:
     materialImportMode: 1
     materialName: 0
