@@ -71,6 +71,8 @@ public class CarController : MonoBehaviour
     // -1 = reverse, 0 = neutral, 1..N = forward gears.
     private int currentGear = 1;
     private string message = "Arabaya yaklas: E ile bin.";
+    private Vector3 steeringWheelBasePosition;
+    private Vector3 steeringWheelPivotOffset;
     private Quaternion steeringWheelBaseRotation;
     private Quaternion frontLeftWheelBaseRotation;
     private Quaternion frontRightWheelBaseRotation;
@@ -446,11 +448,13 @@ public class CarController : MonoBehaviour
 
         if (steeringWheelVisual != null)
         {
+            steeringWheelBasePosition = steeringWheelVisual.localPosition;
             steeringWheelBaseRotation = steeringWheelVisual.localRotation;
-            Vector3 steeringColumnAxis = steeringWheelBaseRotation * Vector3.up;
-            Quaternion steeringColumnCorrection = Quaternion.FromToRotation(steeringColumnAxis, Vector3.right);
-            steeringWheelBaseRotation = steeringColumnCorrection * steeringWheelBaseRotation;
-            steeringWheelVisual.localRotation = steeringWheelBaseRotation;
+
+            MeshFilter steeringWheelMesh = steeringWheelVisual.GetComponent<MeshFilter>();
+            steeringWheelPivotOffset = steeringWheelMesh != null && steeringWheelMesh.sharedMesh != null
+                ? Vector3.Scale(steeringWheelMesh.sharedMesh.bounds.center, steeringWheelVisual.localScale)
+                : Vector3.zero;
         }
 
         if (frontLeftWheelVisual != null)
@@ -473,7 +477,11 @@ public class CarController : MonoBehaviour
         if (steeringWheelVisual != null)
         {
             // Mesh_0.029 is modeled with its steering-column axis on local Y.
-            steeringWheelVisual.localRotation = steeringWheelBaseRotation * Quaternion.AngleAxis(steeringWheelAngle, Vector3.up);
+            Quaternion wheelRotation = steeringWheelBaseRotation * Quaternion.AngleAxis(steeringWheelAngle, Vector3.up);
+            Vector3 pivotInParent = steeringWheelBasePosition + steeringWheelBaseRotation * steeringWheelPivotOffset;
+
+            steeringWheelVisual.localRotation = wheelRotation;
+            steeringWheelVisual.localPosition = pivotInParent - wheelRotation * steeringWheelPivotOffset;
         }
 
         if (frontLeftWheelVisual != null)
