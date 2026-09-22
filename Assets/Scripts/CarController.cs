@@ -468,7 +468,7 @@ public class CarController : MonoBehaviour
 
         if (steeringWheelVisual != null)
         {
-            steeringWheelVisual.localRotation = steeringWheelBaseRotation * Quaternion.Euler(0f, 0f, steeringWheelAngle);
+            steeringWheelVisual.localRotation = steeringWheelBaseRotation * Quaternion.Euler(steeringWheelAngle, 0f, 0f);
         }
 
         if (frontLeftWheelVisual != null)
