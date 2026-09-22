@@ -468,7 +468,8 @@ public class CarController : MonoBehaviour
 
         if (steeringWheelVisual != null)
         {
-            steeringWheelVisual.localRotation = steeringWheelBaseRotation * Quaternion.Euler(steeringWheelAngle, 0f, 0f);
+            // Mesh_0.029 is modeled with its steering-column axis on local Y.
+            steeringWheelVisual.localRotation = steeringWheelBaseRotation * Quaternion.AngleAxis(steeringWheelAngle, Vector3.up);
         }
 
         if (frontLeftWheelVisual != null)
