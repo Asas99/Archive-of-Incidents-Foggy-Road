@@ -447,6 +447,10 @@ public class CarController : MonoBehaviour
         if (steeringWheelVisual != null)
         {
             steeringWheelBaseRotation = steeringWheelVisual.localRotation;
+            Vector3 steeringColumnAxis = steeringWheelBaseRotation * Vector3.up;
+            Quaternion steeringColumnCorrection = Quaternion.FromToRotation(steeringColumnAxis, Vector3.right);
+            steeringWheelBaseRotation = steeringColumnCorrection * steeringWheelBaseRotation;
+            steeringWheelVisual.localRotation = steeringWheelBaseRotation;
         }
 
         if (frontLeftWheelVisual != null)
