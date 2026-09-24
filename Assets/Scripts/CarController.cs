@@ -54,6 +54,22 @@ public class CarController : MonoBehaviour
     [Tooltip("Needle rotation speed in degrees per second. Set to 0 for an instant update.")]
     [SerializeField, Min(0f)] private float speedometerRotationSpeed = 360f;
 
+    [Header("RPM Visual")]
+    [Tooltip("RPM needle pivot. Defaults to the 'gösterge holder (1)' object.")]
+    [SerializeField] private Transform rpmGaugeHolder;
+
+    [Header("Fuel Visual")]
+    [Tooltip("Fuel needle pivot. Defaults to the 'gösterge holder (2)' object.")]
+    [SerializeField] private Transform fuelGaugeHolder;
+    [SerializeField, Range(0f, 1f)] private float fuelAmount = 1f;
+    [Tooltip("Stationary, idling time required to empty a full tank.")]
+    [SerializeField, Min(1f)] private float idleFuelEmptyDurationSeconds = 7200f;
+    [SerializeField, Min(1f)] private float cruisingFuelMultiplier = 1.35f;
+    [SerializeField, Min(1f)] private float acceleratingFuelMultiplier = 2.25f;
+    [SerializeField] private Vector3 fuelMaximumRotation = new Vector3(359.86969f, 312.863068f, 356.053131f);
+    [SerializeField] private Vector3 fuelMinimumRotation = new Vector3(3.93674254f, 40.2273369f, 359.688782f);
+    [SerializeField, Min(0f)] private float fuelNeedleRotationSpeed = 90f;
+
     [Header("Suspension")]
     [SerializeField] private bool suspensionEnabled = true;
     [Tooltip("Raycast origins. They default to the four wheel visuals if left empty.")]
@@ -107,6 +123,7 @@ public class CarController : MonoBehaviour
 
     private bool HasDriver => driverController != null;
     private float SpeedKmh => rb.linearVelocity.magnitude * 3.6f;
+    private float FuelPercent => fuelAmount * 100f;
     private Vector3 DriveForward => useLocalXAxisForForward ? transform.right : transform.forward;
     private Vector3 DriveLateral => useLocalXAxisForForward ? transform.forward : transform.right;
 
@@ -157,6 +174,9 @@ public class CarController : MonoBehaviour
         }
 
         UpdateSpeedometerVisual();
+        UpdateRpmVisual();
+        UpdateFuelState();
+        UpdateFuelVisual();
 
         if (!HasDriver)
         {
@@ -181,7 +201,7 @@ public class CarController : MonoBehaviour
             ShiftGear(-1);
         }
 
-        message = $"Suruyorsun | Hiz: {SpeedKmh:0} km/h | Vites: {CurrentGearName} | Direksiyon: {steeringAngle:0}° | {DriveHint} | Fare ile bak | E - in";
+        message = $"Suruyorsun | Hiz: {SpeedKmh:0} km/h | Benzin: {FuelPercent:0}% | Vites: {CurrentGearName} | Direksiyon: {steeringAngle:0}° | {DriveHint} | Fare ile bak | E - in";
     }
 
     private void FixedUpdate()
@@ -400,6 +420,11 @@ public class CarController : MonoBehaviour
 
     private void ApplyDrive(float throttle)
     {
+        if (fuelAmount <= 0f)
+        {
+            return;
+        }
+
         float forwardSpeed = Vector3.Dot(rb.linearVelocity, DriveForward);
 
         if (throttle > 0.05f && currentGear > 0)
@@ -479,6 +504,8 @@ public class CarController : MonoBehaviour
         frontLeftWheelVisual ??= transform.Find("Araba_Sahne_Model/Mesh_0.025");
         frontRightWheelVisual ??= transform.Find("Araba_Sahne_Model/Mesh_0.028");
         speedometerHolder ??= transform.Find("Araba_Sahne_Model/Mesh_0.018/gösterge holder");
+        rpmGaugeHolder ??= transform.Find("Araba_Sahne_Model/Mesh_0.018/gösterge holder (1)");
+        fuelGaugeHolder ??= transform.Find("Araba_Sahne_Model/Mesh_0.018/gösterge holder (2)");
 
         if (steeringWheelVisual != null)
         {
@@ -617,6 +644,76 @@ public class CarController : MonoBehaviour
                 speedometerRotationSpeed * Time.deltaTime);
     }
 
+    private void UpdateRpmVisual()
+    {
+        if (rpmGaugeHolder == null)
+        {
+            rpmGaugeHolder = transform.Find("Araba_Sahne_Model/Mesh_0.018/gösterge holder (1)");
+            if (rpmGaugeHolder == null)
+            {
+                return;
+            }
+        }
+
+        float maximumKmh = Mathf.Max(speedometerMinimumKmh + 0.01f, speedometerMaximumKmh);
+        float clampedSpeed = Mathf.Clamp(SpeedKmh, speedometerMinimumKmh, maximumKmh);
+        float targetAngleY = speedometerMinimumAngleY
+            + (clampedSpeed - speedometerMinimumKmh) / speedometerKmhPerAngleStep * speedometerDegreesPerStep;
+        Quaternion targetRotation = Quaternion.Euler(0f, targetAngleY, 0f);
+
+        rpmGaugeHolder.localRotation = speedometerRotationSpeed <= 0f
+            ? targetRotation
+            : Quaternion.RotateTowards(
+                rpmGaugeHolder.localRotation,
+                targetRotation,
+                speedometerRotationSpeed * Time.deltaTime);
+    }
+
+    private void UpdateFuelState()
+    {
+        if (!HasDriver || fuelAmount <= 0f)
+        {
+            return;
+        }
+
+        float fuelMultiplier = 1f;
+        if (SpeedKmh > 0.5f)
+        {
+            fuelMultiplier = cruisingFuelMultiplier;
+        }
+
+        if (Mathf.Abs(smoothedThrottle) > 0.05f)
+        {
+            fuelMultiplier = acceleratingFuelMultiplier;
+        }
+
+        float idleDrainPerSecond = 1f / Mathf.Max(1f, idleFuelEmptyDurationSeconds);
+        fuelAmount = Mathf.Max(0f, fuelAmount - idleDrainPerSecond * fuelMultiplier * Time.deltaTime);
+    }
+
+    private void UpdateFuelVisual()
+    {
+        if (fuelGaugeHolder == null)
+        {
+            fuelGaugeHolder = transform.Find("Araba_Sahne_Model/Mesh_0.018/gösterge holder (2)");
+            if (fuelGaugeHolder == null)
+            {
+                return;
+            }
+        }
+
+        Quaternion emptyRotation = Quaternion.Euler(fuelMinimumRotation);
+        Quaternion fullRotation = Quaternion.Euler(fuelMaximumRotation);
+        Quaternion targetRotation = Quaternion.Slerp(emptyRotation, fullRotation, fuelAmount);
+
+        fuelGaugeHolder.localRotation = fuelNeedleRotationSpeed <= 0f
+            ? targetRotation
+            : Quaternion.RotateTowards(
+                fuelGaugeHolder.localRotation,
+                targetRotation,
+                fuelNeedleRotationSpeed * Time.deltaTime);
+    }
+
     private string CurrentGearName => currentGear switch
     {
         -1 => "R",
@@ -628,6 +725,11 @@ public class CarController : MonoBehaviour
     {
         get
         {
+            if (fuelAmount <= 0f)
+            {
+                return "Benzin bitti";
+            }
+
             if (currentGear == -1)
             {
                 return "Geri vites: S ile geri git";
