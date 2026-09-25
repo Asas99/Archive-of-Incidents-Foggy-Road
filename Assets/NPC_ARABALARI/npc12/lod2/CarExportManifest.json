@@ -1,0 +1,152 @@
+{
+  "format": "FoggyRoadCarExport",
+  "version": 1,
+  "sourceBlend": "C:\\Users\\Gireb\\Desktop\\npcaraba12.blend",
+  "fbx": "npcaraba12.fbx",
+  "rootName": "npcaraba12",
+  "objects": [
+    {
+      "name": "Mesh_0",
+      "path": "Mesh_0",
+      "type": "MESH",
+      "materials": [
+        "Material.001"
+      ]
+    },
+    {
+      "name": "Mesh_0.001",
+      "path": "Mesh_0.001",
+      "type": "MESH",
+      "materials": [
+        "Material.002"
+      ]
+    },
+    {
+      "name": "Mesh_0.002",
+      "path": "Mesh_0.002",
+      "type": "MESH",
+      "materials": [
+        "Material.003"
+      ]
+    },
+    {
+      "name": "Mesh_0.003",
+      "path": "Mesh_0.003",
+      "type": "MESH",
+      "materials": [
+        "Material.004"
+      ]
+    },
+    {
+      "name": "Mesh_0.004",
+      "path": "Mesh_0.004",
+      "type": "MESH",
+      "materials": [
+        "Material.005"
+      ]
+    },
+    {
+      "name": "Mesh_0.005",
+      "path": "Mesh_0.005",
+      "type": "MESH",
+      "materials": [
+        "Material.001"
+      ]
+    },
+    {
+      "name": "Mesh_0.006",
+      "path": "Mesh_0.006",
+      "type": "MESH",
+      "materials": [
+        "Material.001"
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "Material.001",
+      "baseColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "alpha": 1.0,
+      "baseMap": "Textures/Image_0.jpg",
+      "normalMap": "Textures/Image_2.jpg",
+      "metallicMap": "Textures/texture_0_metallic.png",
+      "roughnessMap": "Textures/texture_0_roughness.png",
+      "emissionMap": null
+    },
+    {
+      "name": "Material.002",
+      "baseColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "alpha": 1.0,
+      "baseMap": "Textures/Image_0_2.jpg",
+      "normalMap": "Textures/Image_2_2.jpg",
+      "metallicMap": "Textures/texture_0_metallic_2.png",
+      "roughnessMap": "Textures/texture_0_roughness_2.png",
+      "emissionMap": null
+    },
+    {
+      "name": "Material.003",
+      "baseColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "alpha": 1.0,
+      "baseMap": "Textures/Image_0_3.jpg",
+      "normalMap": "Textures/Image_2_3.jpg",
+      "metallicMap": "Textures/texture_0_metallic_3.png",
+      "roughnessMap": "Textures/texture_0_roughness_3.png",
+      "emissionMap": null
+    },
+    {
+      "name": "Material.004",
+      "baseColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "alpha": 1.0,
+      "baseMap": "Textures/Image_0_4.jpg",
+      "normalMap": "Textures/Image_2_4.jpg",
+      "metallicMap": "Textures/texture_0_metallic_4.png",
+      "roughnessMap": "Textures/texture_0_roughness_4.png",
+      "emissionMap": null
+    },
+    {
+      "name": "Material.005",
+      "baseColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "metallic": 0.0,
+      "roughness": 0.5,
+      "alpha": 1.0,
+      "baseMap": "Textures/Image_0_5.jpg",
+      "normalMap": "Textures/Image_2_5.jpg",
+      "metallicMap": "Textures/texture_0_metallic_5.png",
+      "roughnessMap": "Textures/texture_0_roughness_5.png",
+      "emissionMap": null
+    }
+  ]
+}
