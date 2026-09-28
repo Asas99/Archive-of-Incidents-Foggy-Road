@@ -26,11 +26,14 @@ public class CarController : MonoBehaviour
     [SerializeField] private float reverseAcceleration = 14f;
     [SerializeField] private float turnStrength = 95f;
     [SerializeField] private float brakeStrength = 20f;
-    [SerializeField] private float rollingFriction = 1.2f;
+    [Tooltip("Gaz birakildiginda araci yavaslatan dogal surtunme. Dusuk deger daha uzun suzulme saglar.")]
+    [SerializeField] private float rollingFriction = 0.25f;
     [SerializeField] private float lateralGrip = 5f;
     [SerializeField] private float maxReverseSpeed = 12f;
     [SerializeField] private float throttleResponsiveness = 2.5f;
     [SerializeField] private float steeringTurnSpeed = 110f;
+    [Tooltip("Direksiyon tusu birakildiginda tekerlerin merkeze donme hizi (derece/saniye).")]
+    [SerializeField, Min(0f)] private float steeringReturnSpeed = 55f;
     [SerializeField, Range(1f, 45f)] private float maxSteeringAngle = 32f;
     [SerializeField] private float parkedTurnStrength = 35f;
 
@@ -84,9 +87,7 @@ public class CarController : MonoBehaviour
     [SerializeField, Min(0f)] private float suspensionDamperStrength = 4500f;
     [SerializeField] private LayerMask suspensionGroundLayers = Physics.DefaultRaycastLayers;
 
-    [Header("Gear Switching")]
-    [SerializeField] private KeyCode gearUpKey = KeyCode.LeftShift;
-    [SerializeField] private KeyCode gearDownKey = KeyCode.Q;
+    [Header("Automatic Transmission")]
     [SerializeField] private float gearShiftDuration = 0.45f;
     [SerializeField] private float shiftTorqueMultiplier = 0.25f;
     [SerializeField] private GearSetting[] gears =
@@ -191,16 +192,6 @@ public class CarController : MonoBehaviour
 
         UpdateDriverLook();
 
-        if (Input.GetKeyDown(gearUpKey))
-        {
-            ShiftGear(1);
-        }
-
-        if (Input.GetKeyDown(gearDownKey))
-        {
-            ShiftGear(-1);
-        }
-
         message = $"Suruyorsun | Hiz: {SpeedKmh:0} km/h | Benzin: {FuelPercent:0}% | Vites: {CurrentGearName} | Direksiyon: {steeringAngle:0}° | {DriveHint} | Fare ile bak | E - in";
     }
 
@@ -220,10 +211,13 @@ public class CarController : MonoBehaviour
 
         shiftTimer = Mathf.Max(0f, shiftTimer - Time.fixedDeltaTime);
         smoothedThrottle = Mathf.MoveTowards(smoothedThrottle, throttle, throttleResponsiveness * Time.fixedDeltaTime);
+        float forwardSpeed = Vector3.Dot(rb.linearVelocity, DriveForward);
+        UpdateAutomaticGear(throttle, forwardSpeed);
         steeringAngle = ManualTransmissionRules.UpdateSteeringAngle(
             steeringAngle,
             steering,
             steeringTurnSpeed,
+            steeringReturnSpeed,
             maxSteeringAngle,
             Time.fixedDeltaTime);
         ApplySteeringVisuals();
@@ -232,13 +226,14 @@ public class CarController : MonoBehaviour
         ApplySteering();
         ApplyLateralGrip();
 
-        float forwardSpeed = Vector3.Dot(rb.linearVelocity, DriveForward);
-        bool brakingWithReverseKey = throttle < -0.05f && currentGear != -1 && forwardSpeed > 0.2f;
-        if (brake || brakingWithReverseKey)
+        bool brakingAgainstMotion =
+            (throttle < -0.05f && forwardSpeed > 0.2f) ||
+            (throttle > 0.05f && forwardSpeed < -0.2f);
+        if (brake || brakingAgainstMotion)
         {
             ApplyBrake();
         }
-        else if (Mathf.Abs(throttle) < 0.05f || (throttle < -0.05f && currentGear != -1))
+        else if (Mathf.Abs(throttle) < 0.05f)
         {
             ApplyRollingFriction();
         }
@@ -329,7 +324,7 @@ public class CarController : MonoBehaviour
         driverTransform.SetParent(transform, true);
         driverTransform.SetPositionAndRotation(seatPoint.position, seatPoint.rotation);
         Physics.SyncTransforms();
-        message = "Arabaya bindin. W gaz, S fren; geri icin Q ile R vitesine in. Shift/Q vites, E in.";
+        message = "Arabaya bindin. W gaz, S fren/geri, A/D direksiyon, Space el freni, E in.";
     }
 
     private void ExitCar()
@@ -372,9 +367,49 @@ public class CarController : MonoBehaviour
         message = "Arabadan indin.";
     }
 
-    private void ShiftGear(int direction)
+    private void UpdateAutomaticGear(float throttle, float forwardSpeed)
     {
-        int nextGear = Mathf.Clamp(currentGear + direction, -1, gears.Length);
+        const float directionChangeSpeed = 0.3f;
+
+        if (throttle < -0.05f)
+        {
+            if (forwardSpeed <= directionChangeSpeed)
+            {
+                SetGear(-1);
+            }
+
+            return;
+        }
+
+        if (throttle > 0.05f && forwardSpeed < -directionChangeSpeed)
+        {
+            return;
+        }
+
+        if (currentGear <= 0)
+        {
+            SetGear(1);
+        }
+
+        float driveSpeed = Mathf.Max(0f, forwardSpeed);
+        int targetGear = Mathf.Clamp(currentGear, 1, gears.Length);
+
+        while (targetGear < gears.Length && driveSpeed >= gears[targetGear - 1].maxSpeed * 0.85f)
+        {
+            targetGear++;
+        }
+
+        while (targetGear > 1 && driveSpeed < gears[targetGear - 1].minDriveSpeed)
+        {
+            targetGear--;
+        }
+
+        SetGear(targetGear);
+    }
+
+    private void SetGear(int nextGear)
+    {
+        nextGear = Mathf.Clamp(nextGear, -1, gears.Length);
         if (nextGear == currentGear)
         {
             return;
@@ -732,22 +767,10 @@ public class CarController : MonoBehaviour
 
             if (currentGear == -1)
             {
-                return "Geri vites: S ile geri git";
+                return "S ile geri git | W ile frenle";
             }
 
-            if (currentGear == 0)
-            {
-                return "Bos vites: hareket icin Shift ile 1. vitese al";
-            }
-
-            GearSetting gear = gears[currentGear - 1];
-            float forwardSpeed = Vector3.Dot(rb.linearVelocity, DriveForward);
-            if (forwardSpeed < gear.minDriveSpeed)
-            {
-                return $"{gear.name}. vites bu hizda cekmez - Q ile vites kucult";
-            }
-
-            return "A/D direksiyon | S fren";
+            return "Otomatik vites | A/D direksiyon | S fren/geri";
         }
     }
 
@@ -777,7 +800,7 @@ public class CarController : MonoBehaviour
         }
 
         GUI.Box(new Rect(20f, 20f, 600f, 78f), message);
-        GUI.Label(new Rect(32f, 50f, 560f, 24f), "Kontrol: Mouse bakis, W gaz, S fren / R'de geri, A/D donus, Space fren, Shift/Q vites");
+        GUI.Label(new Rect(32f, 50f, 560f, 24f), "Kontrol: Mouse bakis, W gaz, S fren/geri, A/D donus, Space el freni");
     }
 
     [System.Serializable]

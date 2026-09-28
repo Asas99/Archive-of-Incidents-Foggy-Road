@@ -69,14 +69,19 @@ public class CarControllerManualGearTests
     [Test]
     public void Steering_BeginsOnlyAfterTheCarStartsMoving()
     {
-        Assert.That(ManualTransmissionRules.GetTurnStrength(0.34f, 35f, 95f, 4f), Is.EqualTo(0f));
-        Assert.That(ManualTransmissionRules.GetTurnStrength(0.36f, 35f, 95f, 4f), Is.GreaterThan(0f));
+        Assert.That(ManualTransmissionRules.GetTurnStrength(0.19f, 35f, 95f, 4f), Is.EqualTo(0f));
+        Assert.That(ManualTransmissionRules.GetTurnStrength(0.21f, 35f, 95f, 4f), Is.GreaterThan(0f));
     }
 
     [Test]
-    public void Steering_UsesFullStrengthAtDrivingSpeed()
+    public void Steering_SpeedHasLimitedInfluenceOnTurnStrength()
     {
-        Assert.That(ManualTransmissionRules.GetTurnStrength(4f, 35f, 95f, 4f), Is.EqualTo(95f));
+        float lowSpeedStrength = ManualTransmissionRules.GetTurnStrength(0.2f, 35f, 95f, 4f);
+        float highSpeedStrength = ManualTransmissionRules.GetTurnStrength(4f, 35f, 95f, 4f);
+
+        Assert.That(lowSpeedStrength, Is.EqualTo(56f).Within(0.001f));
+        Assert.That(highSpeedStrength, Is.EqualTo(74f).Within(0.001f));
+        Assert.That(highSpeedStrength - lowSpeedStrength, Is.LessThan(95f - 35f));
     }
 
     [Test]
@@ -100,20 +105,20 @@ public class CarControllerManualGearTests
     }
 
     [Test]
-    public void SteeringAngle_IsStoredWhenTheKeyIsReleased()
+    public void SteeringAngle_ReturnsToCenterWhenTheKeyIsReleased()
     {
-        float turnedAngle = ManualTransmissionRules.UpdateSteeringAngle(0f, 1f, 110f, 32f, 0.1f);
-        float heldAngle = ManualTransmissionRules.UpdateSteeringAngle(turnedAngle, 0f, 110f, 32f, 0.1f);
+        float turnedAngle = ManualTransmissionRules.UpdateSteeringAngle(0f, 1f, 110f, 55f, 32f, 0.1f);
+        float returnedAngle = ManualTransmissionRules.UpdateSteeringAngle(turnedAngle, 0f, 110f, 55f, 32f, 0.1f);
 
         Assert.That(turnedAngle, Is.EqualTo(11f));
-        Assert.That(heldAngle, Is.EqualTo(turnedAngle));
+        Assert.That(returnedAngle, Is.EqualTo(5.5f));
     }
 
     [Test]
     public void SteeringAngle_IsClampedToTheMaximum()
     {
-        Assert.That(ManualTransmissionRules.UpdateSteeringAngle(30f, 1f, 110f, 32f, 0.1f), Is.EqualTo(32f));
-        Assert.That(ManualTransmissionRules.UpdateSteeringAngle(-30f, -1f, 110f, 32f, 0.1f), Is.EqualTo(-32f));
+        Assert.That(ManualTransmissionRules.UpdateSteeringAngle(30f, 1f, 110f, 55f, 32f, 0.1f), Is.EqualTo(32f));
+        Assert.That(ManualTransmissionRules.UpdateSteeringAngle(-30f, -1f, 110f, 55f, 32f, 0.1f), Is.EqualTo(-32f));
     }
 
     [Test]

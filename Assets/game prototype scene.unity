@@ -7227,7 +7227,7 @@ MonoBehaviour:
   reverseAcceleration: 14
   turnStrength: 60
   brakeStrength: 20
-  rollingFriction: 1.2
+  rollingFriction: 0.25
   lateralGrip: 5
   maxReverseSpeed: 12
   throttleResponsiveness: 2.5

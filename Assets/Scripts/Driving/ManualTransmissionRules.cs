@@ -25,7 +25,7 @@ namespace FoggyRoad.Driving
 
         public static float GetTurnStrength(float forwardSpeed, float parkedTurnStrength, float movingTurnStrength, float fullStrengthSpeed)
         {
-            const float minimumTurningSpeed = 0.35f;
+            const float minimumTurningSpeed = 0.2f;
             float speed = Mathf.Abs(forwardSpeed);
             if (speed < minimumTurningSpeed)
             {
@@ -33,7 +33,10 @@ namespace FoggyRoad.Driving
             }
 
             float speedFactor = Mathf.InverseLerp(minimumTurningSpeed, fullStrengthSpeed, speed);
-            return Mathf.Lerp(parkedTurnStrength, movingTurnStrength, speedFactor);
+            // Use only the middle 30% of the configured strength range. Low-speed
+            // steering becomes less heavy while high-speed steering stays calmer.
+            float limitedSpeedFactor = Mathf.Lerp(0.35f, 0.65f, speedFactor);
+            return Mathf.Lerp(parkedTurnStrength, movingTurnStrength, limitedSpeedFactor);
         }
 
         public static float GetSteeringDirection(float forwardSpeed)
@@ -51,8 +54,19 @@ namespace FoggyRoad.Driving
             return positivePressed ? 1f : -1f;
         }
 
-        public static float UpdateSteeringAngle(float currentAngle, float steeringInput, float steeringSpeed, float maximumAngle, float deltaTime)
+        public static float UpdateSteeringAngle(
+            float currentAngle,
+            float steeringInput,
+            float steeringSpeed,
+            float returnSpeed,
+            float maximumAngle,
+            float deltaTime)
         {
+            if (Mathf.Abs(steeringInput) < 0.01f)
+            {
+                return Mathf.MoveTowards(currentAngle, 0f, returnSpeed * deltaTime);
+            }
+
             return Mathf.Clamp(
                 currentAngle + steeringInput * steeringSpeed * deltaTime,
                 -maximumAngle,
