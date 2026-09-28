@@ -7232,6 +7232,7 @@ MonoBehaviour:
   maxReverseSpeed: 12
   throttleResponsiveness: 2.5
   steeringTurnSpeed: 10
+  steeringReturnSpeed: 55
   maxSteeringAngle: 32
   parkedTurnStrength: 35
   steeringWheelVisual: {fileID: 280136192}
@@ -7267,8 +7268,6 @@ MonoBehaviour:
   suspensionGroundLayers:
     serializedVersion: 2
     m_Bits: 1907
-  gearUpKey: 304
-  gearDownKey: 113
   gearShiftDuration: 0.45
   shiftTorqueMultiplier: 0.25
   gears:
