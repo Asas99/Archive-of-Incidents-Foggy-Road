@@ -744,8 +744,9 @@ public class MeshyBridgeWindow : EditorWindow
 			// do NOT pre-copy every loose texture into the project — that left a
 			// duplicate, original-named copy of each map beside the meshy_* one.
 			MeshyTextureSet meshyTextures = FindMeshyTextures(sourceDir);
+			Dictionary<string, Material> materialRemaps;
 			if (meshyTextures.HasAny())
-				BuildMeshyMaterials(importedObject, modelDir, meshyTextures);
+				materialRemaps = BuildMeshyMaterials(importedObject, modelDir, meshyTextures);
 			else
 			{
 				// No per-channel PNG maps shipped with this FBX. Fall back to the
@@ -753,11 +754,20 @@ public class MeshyBridgeWindow : EditorWindow
 				// split); the heuristic matcher needs them copied into the project.
 				Debug.LogWarning($"[Meshy Bridge] No per-channel PNG maps found next to {fbxFileName}; falling back to FBX-embedded textures (may be lossy, no metallic/roughness/emission split).");
 				ImportTextureFiles(sourceDir, modelDir);
-				FixMaterialTextureReferences(importedObject, modelDir);
+				materialRemaps = FixMaterialTextureReferences(importedObject, modelDir);
 			}
 
-			EditorUtility.SetDirty(importedObject);
+			// Imported FBX objects are regenerated on refresh. Persist the mapping on
+			// the ModelImporter instead of relying on changes to the transient object.
+			if (AssetImporter.GetAtPath(fbxRelativePath) is ModelImporter modelImporter)
+			{
+				foreach (KeyValuePair<string, Material> entry in materialRemaps)
+					modelImporter.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), entry.Key), entry.Value);
+				modelImporter.SaveAndReimport();
+			}
 			AssetDatabase.SaveAssets();
+			importedObject = AssetDatabase.LoadAssetAtPath<GameObject>(fbxRelativePath);
+			if (!importedObject) return;
 
 			EditorApplication.delayCall += () =>
 			{
@@ -840,10 +850,11 @@ public class MeshyBridgeWindow : EditorWindow
 		}
 	}
 
-	static void FixMaterialTextureReferences(GameObject fbxObject, string modelDir)
+	static Dictionary<string, Material> FixMaterialTextureReferences(GameObject fbxObject, string modelDir)
 	{
 		RenderPipeline pipeline = GetActiveRenderPipeline();
 		Renderer[] renderers = fbxObject.GetComponentsInChildren<Renderer>();
+		Dictionary<string, Material> remaps = new(StringComparer.Ordinal);
 		
 		foreach (Renderer renderer in renderers)
 		{
@@ -855,6 +866,11 @@ public class MeshyBridgeWindow : EditorWindow
 				if (originalMaterial == null) 
 				{
 					newMaterials[i] = null;
+					continue;
+				}
+				if (remaps.TryGetValue(originalMaterial.name, out Material existingMaterial))
+				{
+					newMaterials[i] = existingMaterial;
 					continue;
 				}
 				Material material = new(originalMaterial);
@@ -925,10 +941,12 @@ public class MeshyBridgeWindow : EditorWindow
 				string materialPath = Path.Combine(modelDir, $"{material.name.Replace("(Instance)", "").Trim()}.mat");
 				AssetDatabase.CreateAsset(material, materialPath);
 				newMaterials[i] = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+				remaps.Add(originalMaterial.name, newMaterials[i]);
 				Debug.Log($"[Meshy Bridge] Created and saved material asset at: {materialPath}");
 			}
 			renderer.sharedMaterials = newMaterials;
 		}
+		return remaps;
 	}
 
 	// =====================================================================
@@ -1015,9 +1033,10 @@ public class MeshyBridgeWindow : EditorWindow
 		return set;
 	}
 
-	static void BuildMeshyMaterials(GameObject fbxObject, string modelDir, MeshyTextureSet files)
+	static Dictionary<string, Material> BuildMeshyMaterials(GameObject fbxObject, string modelDir, MeshyTextureSet files)
 	{
 		RenderPipeline pipeline = GetActiveRenderPipeline();
+		Dictionary<string, Material> remaps = new(StringComparer.Ordinal);
 
 		// Maps that bind 1:1 to a material slot.
 		Texture2D baseColor = ImportRawAsAsset(files.color, modelDir, MeshyBaseColorName, isNormal: false, sRGB: true);
@@ -1042,6 +1061,11 @@ public class MeshyBridgeWindow : EditorWindow
 			{
 				Material original = shared[i];
 				if (original == null) { rebuilt[i] = null; continue; }
+				if (remaps.TryGetValue(original.name, out Material existingMaterial))
+				{
+					rebuilt[i] = existingMaterial;
+					continue;
+				}
 
 				Shader shader = pipeline switch
 				{
@@ -1062,10 +1086,12 @@ public class MeshyBridgeWindow : EditorWindow
 				string materialPath = Path.Combine(modelDir, $"{mat.name}.mat").Replace('\\', '/');
 				AssetDatabase.CreateAsset(mat, materialPath);
 				rebuilt[i] = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+				remaps.Add(original.name, rebuilt[i]);
 				Debug.Log($"[Meshy Bridge] Rebuilt PBR material from bridge textures: {materialPath}");
 			}
 			renderer.sharedMaterials = rebuilt;
 		}
+		return remaps;
 	}
 
 	static string SanitizeMaterialName(string name)
