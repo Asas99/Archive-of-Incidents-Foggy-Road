@@ -1,0 +1,83 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Station Dusty Glass
+  m_Shader: {fileID: 4800000, guid: e8dbd99c961a65e4a815b39901eec79d, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _USEPACKEDMASKS_ON
+  - _USESURFACEVARIANTS_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BakedNegative:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BakedPositive:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DustMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _PackedMasks:
+        m_Texture: {fileID: 2800000, guid: d4ae0e62116227e46a03498ad8714327, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _PlanarTexture:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SurfaceVariants:
+        m_Texture: {fileID: 18700000, guid: 40378a8fb539f7c459df056e0464532a, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _DustAmount: 0.48
+    - _DustMultiplier: 1
+    - _DustOpacity: 0.55
+    - _DustSeed: 0
+    - _DustSmoothness: 0.4
+    - _F0: 0.04
+    - _Haze: 0.015
+    - _PlanarMaxMip: 0
+    - _PlanarWeight: 0
+    - _Smoothness: 0.97
+    - _SurfaceMirror: 0
+    - _SurfaceVariant: 0
+    - _TransmissionBlur: 5
+    - _TransmissionReady: 0
+    - _UseDustMask: 0
+    - _UseLocalBaked: 0
+    - _UsePackedMasks: 1
+    - _UseSurfaceVariants: 1
+    - _VariationEnabled: 0
+    - _WearAmount: 0.18
+    - _WearMultiplier: 1
+    m_Colors:
+    - _DustColor: {r: 0.42, g: 0.36, b: 0.27, a: 1}
+    - _GlassTint: {r: 0.83, g: 0.94, b: 0.88, a: 1}
+    - _PaneU: {r: 1, g: 0, b: 0, a: 0}
+    - _PaneV: {r: 0, g: 1, b: 0, a: 0}
+    - _SurfaceRandom: {r: 0, g: 0, b: 0, a: 0}
+    - _WearCrop: {r: 0.9, g: 0.9, b: 0.05, a: 0.05}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

@@ -1,0 +1,27 @@
+PHOTO FLOOR UNITY SETUP
+
+Model:
+GasStationFloor.fbx
+
+Texture:
+Textures/GasStationFloor_BaseColor.png
+
+This addon DOES NOT generate:
+- Normal map
+- Bump map
+- Height map
+- AO
+- Roughness map
+- Metallic map
+
+The source image is copied unchanged.
+
+Recommended Unity URP/Lit setup:
+1. Create a URP/Lit material.
+2. Base Map = GasStationFloor_BaseColor.png
+3. Metallic = 0
+4. Smoothness = about 0.15-0.25 for a matte old floor.
+5. Assign material to GasStationFloor.fbx.
+
+If you want the texture to look as close as possible to the original image,
+avoid strong colored lights and keep the material matte.

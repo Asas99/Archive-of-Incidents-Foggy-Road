@@ -130,6 +130,7 @@ public class CarController : MonoBehaviour
 
     private void Awake()
     {
+        ReflectionActor.Register(gameObject);
         rb = GetComponent<Rigidbody>();
         vehicleCollider = GetComponent<Collider>();
         rb.interpolation = RigidbodyInterpolation.Interpolate;

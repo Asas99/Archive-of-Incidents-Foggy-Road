@@ -1,0 +1,73 @@
+{
+  "format": "WallBuilderUnityExport",
+  "version": 2,
+  "fbx": "Textured_Wall.fbx",
+  "prefab": "Textured_Wall.prefab",
+  "materials": [
+    {
+      "name": "Textured_Wall_Front",
+      "baseMap": "Textures/Textured_Wall_Front_Base.png",
+      "normalMap": "Textures/Textured_Wall_Front_Normal.png",
+      "roughness": 0.6499999761581421,
+      "metallic": 0.0,
+      "baseColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "Textured_Wall_Back",
+      "baseMap": "Textures/Textured_Wall_Back_Base.png",
+      "normalMap": "Textures/Textured_Wall_Back_Normal.png",
+      "roughness": 0.6499999761581421,
+      "metallic": 0.0,
+      "baseColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "Textured_Wall_Left",
+      "baseMap": "Textures/Textured_Wall_Left_Base.png",
+      "normalMap": "Textures/Textured_Wall_Left_Normal.png",
+      "roughness": 0.6499999761581421,
+      "metallic": 0.0,
+      "baseColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "Textured_Wall_Right",
+      "baseMap": "Textures/Textured_Wall_Right_Base.png",
+      "normalMap": "Textures/Textured_Wall_Right_Normal.png",
+      "roughness": 0.6499999761581421,
+      "metallic": 0.0,
+      "baseColor": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "Textured_Wall_TopBottom",
+      "baseMap": "",
+      "normalMap": "",
+      "roughness": 0.6499999761581421,
+      "metallic": 0.0,
+      "baseColor": [
+        0.32,
+        0.28,
+        0.22,
+        1.0
+      ]
+    }
+  ]
+}

@@ -105,3 +105,8 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Local recovery reports, source snapshots and editor-generated scene backups
+/Recovery/
+/Assets/GasStationGlass/Backups/
+/Assets/GasStationGlass/Backups.meta
