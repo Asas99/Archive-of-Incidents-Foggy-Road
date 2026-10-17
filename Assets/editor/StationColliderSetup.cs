@@ -121,6 +121,8 @@ public static class StationColliderSetup
             if(!mesh) {r.action="Unresolved";r.reason="Missing mesh";continue;}
             r.mesh=AssetDatabase.GetAssetPath(mesh);r.triangles=Triangles(mesh);r.size=mesh.bounds.size;
             r.worldSize=Vector3.Scale(r.size,new Vector3(Mathf.Abs(mf.transform.lossyScale.x),Mathf.Abs(mf.transform.lossyScale.y),Mathf.Abs(mf.transform.lossyScale.z)));item.bounds=mesh.bounds;
+            var doorway=UnityEngine.Object.FindObjectsByType<DoorwayColliderAuthoring>(FindObjectsInactive.Include,FindObjectsSortMode.None).FirstOrDefault(o=>o.gameObject.scene==root.scene && (o.first==mf || o.second==mf));
+            if(doorway) {r.action=doorway.Built ? "Keep" : "Unresolved";r.reason=doorway.Built ? "Managed doorway collider set" : "Doorway requires rebuild; generic mesh collider suppressed";continue;}
             var covered=CoveringCollider(mf);
             if(covered) {r.action="Keep";r.reason="Existing "+covered.GetType().Name+" at "+PathOf(covered.transform)+(covered.enabled&&!covered.isTrigger?"":" [WARNING disabled/trigger]");continue;}
             if(r.triangles==0) {r.action="Unresolved";r.reason="No mesh triangles";continue;}
@@ -195,4 +197,5 @@ public static class StationColliderSetup
         finally {Undo.CollapseUndoOperations(undo);}
     }
 }
+
 
