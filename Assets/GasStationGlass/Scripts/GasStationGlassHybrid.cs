@@ -48,11 +48,9 @@ public sealed partial class GasStationPlanarGlass
             }
         foreach(var group in groups)
         {
-            if(!group.plane) continue;
-            Vector3 point=group.plane.TransformPoint(group.localPoint);
-            Vector3 normal=group.plane.localToWorldMatrix.inverse.transpose.MultiplyVector(group.localNormal).normalized;
-            group.bakedPositive=ChooseProbe(probes,point,normal,1);
-            group.bakedNegative=ChooseProbe(probes,point,normal,-1);
+            var binding=group.plane ? group.plane.GetComponent<GlassReflectionBinding>() : null;
+            group.bakedPositive=binding && binding.Verified ? binding.positive : null;
+            group.bakedNegative=binding && binding.Verified ? binding.negative : null;
         }
     }
     static bool IsGlassBakedSource(ReflectionProbe probe)
@@ -61,22 +59,10 @@ public sealed partial class GasStationPlanarGlass
             !probe.name.StartsWith("Glass Probe ",StringComparison.Ordinal) &&
             !probe.name.StartsWith("Hybrid Baked ",StringComparison.Ordinal);
     }
-    static ReflectionProbe ChooseProbe(ReflectionProbe[] probes,Vector3 point,Vector3 normal,int side)
-    {
-        ReflectionProbe best=null; float score=float.PositiveInfinity;
-        foreach(var probe in probes)
-        {
-            if(!IsGlassBakedSource(probe) || !probe.gameObject.activeInHierarchy) continue;
-            float distance=(probe.transform.position-point).sqrMagnitude;
-            if(Vector3.Dot(probe.transform.position-point,normal)*side<0.05f) distance+=1000000;
-            if(distance<score) { score=distance; best=probe; }
-        }
-        return best;
-    }
     static void SetBakedProperties(MaterialPropertyBlock properties,WindowGroup group)
     {
         bool valid=group.plane && group.bakedPositive && group.bakedNegative && group.bakedPositive.customBakedTexture && group.bakedNegative.customBakedTexture;
-        properties.SetFloat("_UseLocalBaked",valid ? 1 : 0);
+        properties.SetFloat("_UseLocalBaked",valid ? 1 : -1);
         if(!valid) return;
         properties.SetVector("_BakedNormal",group.plane.localToWorldMatrix.inverse.transpose.MultiplyVector(group.localNormal).normalized);
         SetProbe(properties,group.bakedPositive,PositiveProbeIds); SetProbe(properties,group.bakedNegative,NegativeProbeIds);

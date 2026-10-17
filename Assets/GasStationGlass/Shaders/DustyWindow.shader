@@ -182,6 +182,7 @@ Shader "FoggyRoad/Gas Station/Dusty Window"
                         environment=DecodeHDREnvironment(encoded,_BakedHDRNegative);
                     }
                 }
+                else if(_UseLocalBaked< -0.5) environment=0; // Unverified pane: never borrow an unrelated room.
                 else environment=GlossyEnvironmentReflection(ray,i.positionWS,1-smoothness,1,screenUV);
                 environment=MixFog(environment,i.fog);
                 float4 projected=mul(_PlanarVP,float4(i.positionWS,1));

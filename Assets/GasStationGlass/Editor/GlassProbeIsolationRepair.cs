@@ -30,7 +30,7 @@ public static class GlassProbeIsolationRepair
             if(scene.path!="Assets/game prototype scene.unity") continue;
             bool needsRepair=false;
             foreach(var probe in manager.GetComponentsInChildren<ReflectionProbe>(true))
-                needsRepair|=(probe.enabled || EditorUtility.IsDirty(probe)) && probe.mode==ReflectionProbeMode.Custom && probe.customBakedTexture;
+                needsRepair|=probe.enabled && probe.mode==ReflectionProbeMode.Custom && probe.customBakedTexture;
             if(!needsRepair) continue;
             Directory.CreateDirectory("Assets/GasStationGlass/Backups");
             string backup="Assets/GasStationGlass/Backups/BeforeProbeIsolation_"+System.DateTime.Now.ToString("yyyyMMdd_HHmmss")+".unity";
@@ -48,3 +48,4 @@ public static class GlassProbeIsolationRepair
         File.WriteAllText("Library/GlassProbeIsolationRepair.txt","Glass-only probe repair complete. Disabled automatic environment assignment on "+changed+" probes. Materials and lighting unchanged.\n");
     }
 }
+

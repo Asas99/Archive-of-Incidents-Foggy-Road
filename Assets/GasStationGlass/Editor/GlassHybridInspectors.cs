@@ -24,6 +24,9 @@ public sealed class GlassSurfaceVariationInspector : Editor
         {
             var pane=(GlassSurfaceVariation)item;
             EditorGUILayout.LabelField(pane.name,"Variant "+pane.SurfaceVariant);
+            var reflection=pane.GetComponent<GlassReflectionBinding>();
+            if(!reflection || !reflection.Verified) EditorGUILayout.HelpBox("Reflection regions are unverified. Assign and verify both sides before using this pane.",MessageType.Warning);
+            else EditorGUILayout.LabelField("Reflection regions",reflection.positiveRegion+" / "+reflection.negativeRegion);
             EditorGUILayout.SelectableLabel(pane.StableId??"Unassigned",GUILayout.Height(18));
         }
         if(!Application.isPlaying && GUILayout.Button("Regenerate selected dust patterns"))

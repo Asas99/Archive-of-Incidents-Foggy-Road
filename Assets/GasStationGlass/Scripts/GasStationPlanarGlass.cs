@@ -250,8 +250,13 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
             foreach(var group in groups)
             {
                 if(!group.plane || group.name.StartsWith("Moving")) continue;
+                var binding=window.GetComponent<GlassReflectionBinding>();
+                var existingBinding=group.plane.GetComponent<GlassReflectionBinding>();
+                if(!binding || !existingBinding || !binding.Verified || !existingBinding.Verified) continue;
                 var n=group.plane.localToWorldMatrix.inverse.transpose.MultiplyVector(group.localNormal).normalized;
                 if(Mathf.Abs(Vector3.Dot(n,normal))<0.9999f || Mathf.Abs(Vector3.Dot(point-group.plane.TransformPoint(group.localPoint),normal))>0.01f) continue;
+                bool sameDirection=Vector3.Dot(n,normal)>=0;
+                if(binding.positive!=(sameDirection?existingBinding.positive:existingBinding.negative) || binding.negative!=(sameDirection?existingBinding.negative:existingBinding.positive)) continue;
                 var members=new List<Renderer>(group.windows); members.Add(window); group.windows=members.ToArray(); return;
             }
         }
