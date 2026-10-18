@@ -16126,10 +16126,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   reflectionMode: 1
-  activityInterval: 0.1
+  activityInterval: 0.02
   activityHold: 1.5
   transitionSeconds: 0.4
-  liveUpdatesPerSecond: 30
+  liveUpdatesPerSecond: 60
   idleResourceSeconds: 3
   testActorOcclusion: 1
   playerCamera: {fileID: 1635575726}

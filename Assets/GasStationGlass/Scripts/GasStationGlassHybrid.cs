@@ -7,10 +7,12 @@ public sealed partial class GasStationPlanarGlass
 {
     public enum ReflectionMode { Baked, Hybrid, Realtime }
     public ReflectionMode reflectionMode = ReflectionMode.Hybrid;
-    [Min(0.02f)] public float activityInterval=0.1f;
+    // Keep moving reflected actors responsive. 0.1 seconds made cars visibly trail
+    // behind their gameplay position before the live reflection was even requested.
+    [Min(0.01f)] public float activityInterval=0.02f;
     [Min(0)] public float activityHold=1.5f;
     [Min(0.01f)] public float transitionSeconds=0.4f;
-    [Range(1,60)] public float liveUpdatesPerSecond=30;
+    [Range(1,60)] public float liveUpdatesPerSecond=60;
     [Min(0)] public float idleResourceSeconds=3;
     public bool testActorOcclusion=true;
     public int RegisteredActors => ReflectionActor.RegisteredCount;
