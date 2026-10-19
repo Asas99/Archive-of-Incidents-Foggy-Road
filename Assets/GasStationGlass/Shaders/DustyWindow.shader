@@ -24,6 +24,9 @@ Shader "FoggyRoad/Gas Station/Dusty Window"
         [Toggle] _UsePackedMasks("Use Packed Surface Masks", Float) = 0
         _WearAmount("Light Surface Wear", Range(0,0.5)) = 0.12
         _TransmissionBlur("Dirty Glass Transmission Blur (1080p pixels)", Range(0,12)) = 5
+        _TransmissionScatter("Dirt Transmission Scatter", Range(0,1)) = 0.3
+        [HideInInspector] _PlanarAtlasRect("Atlas region", Vector) = (1,1,0,0)
+        [HideInInspector] _TransmissionSamples("Transmission Samples", Float) = 4
         [HideInInspector] _TransmissionReady("Opaque Scene Available", Float) = 0
         [HideInInspector] _VariationEnabled("Per Pane Variation", Float) = 0
         [HideInInspector] _PaneU("Pane U", Vector) = (1,0,0,0)
@@ -33,6 +36,7 @@ Shader "FoggyRoad/Gas Station/Dusty Window"
         [HideInInspector] _DustMultiplier("Dust Variation", Float) = 1
         [HideInInspector] _WearMultiplier("Wear Variation", Float) = 1
         [HideInInspector] _PlanarTexture("Planar Reflection", 2D) = "black" {}
+        [HideInInspector] _DynamicStrength("Dynamic layer strength", Range(0,1)) = 1
         [HideInInspector] _PlanarWeight("Planar Weight", Float) = 0
         [HideInInspector] _PlanarMaxMip("Planar Max Mip", Float) = 0
     }
@@ -76,10 +80,13 @@ Shader "FoggyRoad/Gas Station/Dusty Window"
                 float4 _GlassTint, _DustColor, _DustMask_ST;
                 float _Haze, _F0, _Smoothness, _UseDustMask, _DustAmount;
                 float _DustOpacity, _DustSmoothness, _DustSeed;
-                float _PlanarWeight, _PlanarMaxMip;
+                float4 _PlanarAtlasRect;
+                float _TransmissionScatter;
+                float _DynamicStrength;
+                float _PlanarWeight, _PlanarMaxMip, _DynamicOverlay, _DynamicDebug;
                 float4 _PaneU, _PaneV, _SurfaceRandom, _WearCrop;
                 float _VariationEnabled, _UsePackedMasks, _WearAmount, _DustMultiplier, _WearMultiplier;
-                float _TransmissionBlur, _TransmissionReady;
+                float _TransmissionBlur, _TransmissionReady, _TransmissionSamples;
                 float _UseSurfaceVariants, _SurfaceVariant, _SurfaceMirror;
                 float _UseLocalBaked;
                 float4 _BakedNormal, _BakedPositionPositive, _BakedPositionNegative;
@@ -199,7 +206,15 @@ Shader "FoggyRoad/Gas Station/Dusty Window"
                     half mip=(1-smoothness)*_PlanarMaxMip;
                     // Extra roughness footprint makes the mask's reflection blur visible.
                     mip=min(_PlanarMaxMip,mip+roughCoverage*2);
-                    half3 planar=SAMPLE_TEXTURE2D_LOD(_PlanarTexture,sampler_PlanarTexture,uv,mip).rgb;
+                    half4 captured=SAMPLE_TEXTURE2D_LOD(_PlanarTexture,sampler_PlanarTexture,uv*_PlanarAtlasRect.xy+_PlanarAtlasRect.zw,mip);
+                    half3 planar=captured.rgb;
+                    if(_DynamicOverlay>0.5)
+                    {
+                        captured*=saturate(_DynamicStrength);
+                        // Colour is premultiplied by filtered opaque coverage. Keep baked colour only in uncovered pixels.
+                        planar=environment*(1-saturate(captured.a))+captured.rgb;
+                        if(_DynamicDebug>0.5)planar=_DynamicDebug<1.5?captured.aaa:captured.rgb;
+                    }
                     // Planar scene colour already contains scene fog.
                     reflection=lerp(environment,planar,saturate(_PlanarWeight*valid));
                 }
@@ -235,15 +250,25 @@ Shader "FoggyRoad/Gas Station/Dusty Window"
                 highlights*=ComputeFogIntensity(i.fog);
                 half a=fresnel+opacity*(1-fresnel);
                 half3 colour=reflection*fresnel+haze*opacity*(1-fresnel)+highlights;
-                if(_TransmissionReady>0.5 && _TransmissionBlur>0.01 && contamination>0.001)
+                if(_TransmissionReady>0.5 && _TransmissionSamples>0.5 && _TransmissionBlur>0.01 && contamination>0.001)
                 {
-                    // Four taps, shared URP opaque copy; clean glass keeps ordinary alpha blending.
+                    // Shared URP opaque copy; clean glass keeps ordinary alpha blending.
                     float2 radius=float2(_TransmissionBlur/1920.0,_TransmissionBlur/1080.0)*roughCoverage;
-                    half3 blurred=(SampleSceneColor(saturate(screenUV+radius*float2(-1,-1)))+
-                                   SampleSceneColor(saturate(screenUV+radius*float2(1,-1)))+
-                                   SampleSceneColor(saturate(screenUV+radius*float2(-1,1)))+
-                                   SampleSceneColor(saturate(screenUV+radius*float2(1,1))))*0.25;
-                    half scatter=saturate(roughCoverage*0.9);
+                    half3 blurred;
+                    [branch] if(_TransmissionSamples>3)
+                        blurred=(SampleSceneColor(saturate(screenUV+radius*float2(-1,-1)))+
+                                 SampleSceneColor(saturate(screenUV+radius*float2(1,-1)))+
+                                 SampleSceneColor(saturate(screenUV+radius*float2(-1,1)))+
+                                 SampleSceneColor(saturate(screenUV+radius*float2(1,1))))*0.25;
+                    else
+                    {
+                        // Fixed symmetric positions avoid temporal noise while retaining a 2D footprint
+                        // through the shared, bilinear half-resolution opaque texture.
+                        float2 offset=radius*float2(0.92388,0.38268);
+                        blurred=(SampleSceneColor(saturate(screenUV-offset))+
+                                 SampleSceneColor(saturate(screenUV+offset)))*0.5;
+                    }
+                    half scatter=saturate(roughCoverage*_TransmissionScatter);
                     colour+=blurred*(1-a)*scatter;
                     a+=(1-a)*scatter;
                 }
@@ -254,3 +279,4 @@ Shader "FoggyRoad/Gas Station/Dusty Window"
     }
     FallBack Off
 }
+

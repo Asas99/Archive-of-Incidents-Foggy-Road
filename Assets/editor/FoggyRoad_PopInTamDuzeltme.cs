@@ -185,6 +185,7 @@ public static class FoggyRoad_PopInTamDuzeltme
 
     static void Uygula(Seviye seviye)
     {
+        if(Object.FindFirstObjectByType<SceneOptimizationController>()){Debug.LogWarning("Scene Optimization profile owns culling and terrain settings. Restore it before applying a legacy preset.");return;}
         Ayar a = Getir(seviye);
         Debug.Log("===== [FoggyRoad] " + a.ad + " PRESET UYGULANIYOR =====");
 

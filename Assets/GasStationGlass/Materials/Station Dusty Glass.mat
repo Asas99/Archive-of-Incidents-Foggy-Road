@@ -55,7 +55,7 @@ Material:
     - _DustMultiplier: 1
     - _DustOpacity: 0.55
     - _DustSeed: 0
-    - _DustSmoothness: 0.4
+    - _DustSmoothness: 0.75
     - _F0: 0.04
     - _Haze: 0.015
     - _PlanarMaxMip: 0
@@ -63,8 +63,10 @@ Material:
     - _Smoothness: 0.97
     - _SurfaceMirror: 0
     - _SurfaceVariant: 0
-    - _TransmissionBlur: 5
+    - _TransmissionBlur: 1.75
     - _TransmissionReady: 0
+    - _TransmissionSamples: 4
+    - _TransmissionScatter: 0.3
     - _UseDustMask: 0
     - _UseLocalBaked: 0
     - _UsePackedMasks: 1
@@ -77,6 +79,7 @@ Material:
     - _GlassTint: {r: 0.83, g: 0.94, b: 0.88, a: 1}
     - _PaneU: {r: 1, g: 0, b: 0, a: 0}
     - _PaneV: {r: 0, g: 1, b: 0, a: 0}
+    - _PlanarAtlasRect: {r: 1, g: 1, b: 0, a: 0}
     - _SurfaceRandom: {r: 0, g: 0, b: 0, a: 0}
     - _WearCrop: {r: 0.9, g: 0.9, b: 0.05, a: 0.05}
   m_BuildTextureStacks: []

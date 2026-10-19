@@ -87,6 +87,12 @@ public static partial class GlassRoomSetup
                             report.AppendLine("DIAGNOSTIC mode="+manager.reflectionMode+" reason="+manager.LastActivityReason+" registered="+manager.RegisteredActors+" sourceMask="+camera.cullingMask+" reflectionMask="+manager.reflectionLayers.value+" pipeline="+GraphicsSettings.currentRenderPipeline+" configured="+manager.configuredPipeline+" marker="+actor.TryGetBounds(manager.reflectionLayers.value,now,out var ab,out var le)+" bounds="+ab+" windowEnabled="+pane.Surface.enabled+" windowActive="+pane.gameObject.activeInHierarchy+" windowBounds="+pane.Surface.bounds+" camera="+camera.transform.position+" shaderGlobal="+Shader.GetGlobalFloat("_GasGlassRenderingReflection"));}
                         Require(label=="HybridActive"?count>0&&count<=32:count==0,pane.name+" side="+side+" "+label+" captures="+count);
                         var mpb=new MaterialPropertyBlock();pane.Surface.GetPropertyBlock(mpb);Require(mpb.GetFloat("_UseLocalBaked")==1&&mpb.GetFloat("_VariationEnabled")==1,pane.name+" correct local reflection and dirt MPB survive transitions");
+                        if(label=="HybridActive")
+                        {
+                            report.AppendLine("LIVE "+pane.name+" side="+side+" oblique="+oblique+" weight="+mpb.GetFloat("_PlanarWeight")+" models="+manager.DynamicModelCount+" tris="+manager.DynamicTriangles+" reason="+manager.LastActivityReason+" update="+manager.LastUpdateReason);
+                            var raw=mpb.GetTexture("_PlanarTexture") as RenderTexture;
+                            if(raw){var oldTarget=RenderTexture.active;RenderTexture.active=raw;var read=new Texture2D(raw.width,raw.height,TextureFormat.RGBA32,false);read.ReadPixels(new Rect(0,0,raw.width,raw.height),0,0);read.Apply();File.WriteAllBytes(Output+"/Raw_"+pane.name.Replace(' ','_')+"_"+side+"_"+oblique+".png",read.EncodeToPNG());UnityEngine.Object.DestroyImmediate(read);RenderTexture.active=oldTarget;}
+                        }
                         report.AppendLine("SAMPLE "+pane.name+" side="+side+" oblique="+oblique+" "+label+" sync render/readback batch="+sw.Elapsed.TotalMilliseconds.ToString("F2")+"ms (not runtime FPS)");
                     }
                 }

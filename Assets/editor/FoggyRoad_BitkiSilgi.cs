@@ -1,4 +1,4 @@
-// BITKI SILGISI: Scene View firca ile terrain uzerindeki cim (detail) ve
+﻿// BITKI SILGISI: Scene View firca ile terrain uzerindeki cim (detail) ve
 // agac (tree) verisini belirli bir noktadan siler.
 //
 // NEDEN GEREKLI:
@@ -38,6 +38,7 @@
 // Not: yorum ve loglarda Turkce karakter kullanilmiyor (proje kalibi).
 #if UNITY_EDITOR
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -69,6 +70,18 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
     // ------------------------------------------------------------------
     //  Durum
     // ------------------------------------------------------------------
+    enum FircaModu { Sil, Ekle }
+    FircaModu mod;
+    float yogunluk = 1.3f, yumusaklik = .3f, azamiEgim = 50;
+    bool engelleriKoru = true;
+    readonly Dictionary<string, float> bitkiAgirliklari = new Dictionary<string, float>();
+    readonly Dictionary<TerrainData, HashSet<int>> ziyaretEdilen = new Dictionary<TerrainData, HashSet<int>>();
+    readonly HashSet<Terrain> degisenTerrainler = new HashSet<Terrain>();
+    System.Random rastgele;
+    Vector3 sonDamga; bool damgaVar;
+    int toplamEklenen;
+    int sahipKontrol;
+    bool uzakKirli;
     bool fircaAcik;
     float yaricap = 4f;
 
@@ -103,8 +116,16 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
     static void Ac()
     {
         var w = GetWindow<FoggyRoad_BitkiSilgi>("Bitki Silgisi");
-        w.minSize = new Vector2(320, 420);
+        w.mod = FircaModu.Sil;
+        w.minSize = new Vector2(360, 500);
         w.Show();
+    }
+
+    [MenuItem("Tools/Foggy Road/Bitki Fırçası (Ekle ve Sil)")]
+    public static void AcEkle()
+    {
+        var w = GetWindow<FoggyRoad_BitkiSilgi>("Bitki Fırçası");
+        w.mod = FircaModu.Ekle; w.yogunluk = 1.3f; w.yumusaklik = .3f; w.bitkiAgirliklari.Clear(); w.minSize = new Vector2(360, 500); w.Show();
     }
 
     void OnEnable()
@@ -114,13 +135,16 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
 
     void OnDisable()
     {
+        StrokeKapat();
         SceneView.duringSceneGui -= SahneGui;
         FircaAyarla(false);
     }
 
     void FircaAyarla(bool ac)
     {
+        if (ac && EditorApplication.isPlayingOrWillChangePlaymode) return;
         if (ac == fircaAcik) return;
+        if (!ac) { StrokeKapat(); if (sahipKontrol != 0 && GUIUtility.hotControl == sahipKontrol) GUIUtility.hotControl = 0; sahipKontrol = 0; }
         fircaAcik = ac;
 
         if (ac)
@@ -154,11 +178,18 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
         kaydirma = EditorGUILayout.BeginScrollView(kaydirma);
 
         EditorGUILayout.HelpBox(
-            "Scene View'da sol tik / surukle ile firca altindaki bitkileri siler.\n" +
-            "[ ve ] tuslari yaricapi degistirir.",
+            "Scene View: sol tık / sürükle = ekle veya sil. Ekle modunda Shift = geçici ot silgisi.\n[ ve ] = fırça boyutu. Alt + fare = normal kamera gezintisi.",
             MessageType.None);
 
+        using (new EditorGUI.DisabledScope(aktifStroke != null))
+            mod = (FircaModu)GUILayout.Toolbar((int)mod, new[] { "Silgi", "Rastgele bitki ekle" });
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+        {
+            EditorGUILayout.HelpBox("Boyamak için Play Mode'dan çık.", MessageType.Info);
+            EditorGUILayout.EndScrollView(); return;
+        }
         // --- firca ac/kapat ---
+        if (mod == FircaModu.Ekle) yaricap = Mathf.Min(yaricap, 25f);
         var eskiRenk = GUI.backgroundColor;
         GUI.backgroundColor = fircaAcik ? new Color(1f, 0.45f, 0.35f) : eskiRenk;
         if (GUILayout.Button(fircaAcik ? "FIRCA ACIK  (kapatmak icin tikla)" : "FIRCA AC",
@@ -183,12 +214,15 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
 
         EditorGUILayout.Space();
 
-        yaricap = EditorGUILayout.Slider("Yaricap (m)", yaricap, 0.5f, 50f);
+        yaricap = EditorGUILayout.Slider("Yaricap (m)", yaricap, 0.5f, mod == FircaModu.Ekle ? 25f : 50f);
 
         EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Ne silinsin?", EditorStyles.boldLabel);
-        silDetay = EditorGUILayout.Toggle("Cim / detail katmanlari", silDetay);
-        silAgac = EditorGUILayout.Toggle("Terrain agaclari", silAgac);
+        if (mod == FircaModu.Sil)
+        {
+            EditorGUILayout.LabelField("Ne silinsin?", EditorStyles.boldLabel);
+            silDetay = EditorGUILayout.Toggle("Çimen / detail katmanları", silDetay);
+            silAgac = EditorGUILayout.Toggle("Terrain ağaçları", silAgac);
+        }
 
         var terrain = HedefTerrain();
         if (terrain == null)
@@ -201,7 +235,7 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
         var td = terrain.terrainData;
 
         // --- detail katman secimi ---
-        if (silDetay)
+        if (mod == FircaModu.Sil && silDetay)
         {
             EditorGUILayout.Space();
             detayKatlandi = EditorGUILayout.Foldout(detayKatlandi,
@@ -229,7 +263,7 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
         }
 
         // --- agac tipi secimi ---
-        if (silAgac)
+        if (mod == FircaModu.Sil && silAgac)
         {
             EditorGUILayout.Space();
             agacKatlandi = EditorGUILayout.Foldout(agacKatlandi,
@@ -257,6 +291,34 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
             }
         }
 
+        if (mod == FircaModu.Ekle)
+        {
+            EditorGUILayout.HelpBox("Mevcut Terrain çimen/eğrelti katmanlarını karıştırır. Boyları sahnedeki ayarlardan alınır; eski bitkilerin boyu değişmez. Ağaç ve yükselti eklemez.", MessageType.Info);
+            yogunluk = EditorGUILayout.Slider("Örtü yoğunluğu", yogunluk, .05f, 3f);
+            yumusaklik = EditorGUILayout.Slider("Yumuşak kenar", yumusaklik, 0, 1);
+            azamiEgim = EditorGUILayout.Slider("En fazla eğim", azamiEgim, 0, 80);
+            engelleriKoru = EditorGUILayout.Toggle("Yol/beton/collider üstüne ekleme", engelleriKoru);
+            EditorGUILayout.LabelField("Bitki karışımı (0 = kapalı)", EditorStyles.boldLabel);
+            for (int i = 0; i < td.detailPrototypes.Length; i++)
+            {
+                var proto = td.detailPrototypes[i]; if (!VegetationBrushPaint.IsPlant(proto)) continue;
+                string key = VegetationBrushPaint.Key(proto); VarsayilanAgirlik(proto);
+                bitkiAgirliklari[key] = EditorGUILayout.Slider(VegetationBrushPaint.Name(proto), bitkiAgirliklari[key], 0, 2);
+            }
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Dolu çayır")) { yogunluk = 1.3f; yumusaklik = .3f; bitkiAgirliklari.Clear(); }
+            if (GUILayout.Button("Çok sık / eğreltili"))
+            {
+                yogunluk = 2.2f; yumusaklik = .25f; bitkiAgirliklari.Clear();
+                foreach (var proto in td.detailPrototypes) if (VegetationBrushPaint.IsPlant(proto)) bitkiAgirliklari[VegetationBrushPaint.Key(proto)] = VegetationBrushPaint.Name(proto).ToLowerInvariant().Contains("dry") ? .25f : 1f;
+            }
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.LabelField("Tek geçişte çok katmanlı örtü. Yoğunluğu artırmak çizim yükünü de artırır.", EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.LabelField("Boyut: katmanların mevcut Min/Max Width ve Height ayarları", EditorStyles.wordWrappedMiniLabel);
+        }
+
+        EditorGUILayout.LabelField("Eklenen hücre: " + toplamEklenen, EditorStyles.miniLabel);
+        if (uzakKirli) EditorGUILayout.HelpBox("Boya/silme hazır. 150m uzak örtüde de görünmesi için bitince aşağıdaki Kaydet + uzak çimeni güncelle düğmesine bas.", MessageType.Info);
         // --- geri al / kaydet ---
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Bu oturum: " + toplamSilinenDetay + " detail hucresi, " +
@@ -268,9 +330,17 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
                 GeriAl();
         }
 
-        if (GUILayout.Button("Degisiklikleri Kaydet (AssetDatabase)"))
+        if (GUILayout.Button("Kaydet + uzak çimeni güncelle", GUILayout.Height(28)))
         {
-            AssetDatabase.SaveAssets();
+            StrokeKapat();
+            try
+            {
+                foreach (var t in degisenTerrainler) if (t) AssetDatabase.SaveAssetIfDirty(t.terrainData);
+                EditorUtility.DisplayProgressBar("Bitki Fırçası", "Uzak çimen örtüsü güncelleniyor...", .5f);
+                VegetationBrushPaint.RefreshDistantGrass(degisenTerrainler);
+                AssetDatabase.SaveAssets(); uzakKirli = false; SceneView.RepaintAll();
+            }
+            finally { EditorUtility.ClearProgressBar(); }
             Debug.Log("[Bitki Silgisi] TerrainData asset'leri kaydedildi.");
         }
 
@@ -287,7 +357,7 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
 
     static string DetayAdi(DetailPrototype p, int i)
     {
-        if (p.usePrototypeMesh && p.prototype != null) return p.prototype.name;
+        if (p.usePrototypeMesh && p.prototype != null) return VegetationBrushPaint.Name(p);
         if (p.prototypeTexture != null) return p.prototypeTexture.name;
         return "Detail " + i;
     }
@@ -296,7 +366,7 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
     {
         var hepsi = Terrain.activeTerrains;
         if (hepsi == null || hepsi.Length == 0) return null;
-        return hepsi[0];
+        return hepsi.FirstOrDefault(VegetationBrushPaint.IsGroundTerrain);
     }
 
     // ==================================================================
@@ -304,7 +374,7 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
     // ==================================================================
     void SahneGui(SceneView sv)
     {
-        if (!fircaAcik) return;
+        if (!fircaAcik || EditorApplication.isPlayingOrWillChangePlaymode) return;
 
         var e = Event.current;
 
@@ -323,11 +393,13 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
             }
             else if (e.keyCode == KeyCode.RightBracket)
             {
-                yaricap = Mathf.Min(50f, yaricap * 1.25f);
+                yaricap = Mathf.Min(mod == FircaModu.Ekle ? 25f : 50f, yaricap * 1.25f);
                 e.Use(); Repaint(); sv.Repaint();
             }
         }
 
+        if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape) { FircaAyarla(false); e.Use(); return; }
+        bool ekle = mod == FircaModu.Ekle && !e.shift;
         // Firca konumu
         var ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
         noktaGecerli = TerrainVur(ray, out sonTerrain, out sonNokta);
@@ -340,15 +412,15 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
                 Mathf.InverseLerp(sonTerrain.transform.position.z,
                     sonTerrain.transform.position.z + sonTerrain.terrainData.size.z, sonNokta.z));
 
-            Handles.color = new Color(1f, 0.35f, 0.25f, 0.20f);
+            Handles.color = ekle ? new Color(.25f, 1f, .35f, .20f) : new Color(1f, .35f, .25f, .20f);
             Handles.DrawSolidDisc(sonNokta + normal * 0.05f, normal, yaricap);
-            Handles.color = new Color(1f, 0.35f, 0.25f, 0.95f);
+            Handles.color = ekle ? new Color(.25f, 1f, .35f, .95f) : new Color(1f, .35f, .25f, .95f);
             Handles.DrawWireDisc(sonNokta + normal * 0.05f, normal, yaricap);
 
             Handles.BeginGUI();
             var gp = HandleUtility.WorldToGUIPoint(sonNokta);
             GUI.Label(new Rect(gp.x + 14, gp.y - 10, 200, 20),
-                "SIL  r=" + yaricap.ToString("0.0") + " m");
+                (ekle ? "EKLE  r=" : "SİL  r=") + yaricap.ToString("0.0") + " m");
             Handles.EndGUI();
 
             sv.Repaint();
@@ -364,18 +436,30 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
         {
             if (tip == EventType.MouseDown)
             {
-                aktifStroke = new Stroke();
-                if (noktaGecerli) Sil(sonNokta);
+                if (!noktaGecerli || e.control || e.command) return;
+                aktifStroke = new Stroke(); ziyaretEdilen.Clear(); rastgele = new System.Random(System.Environment.TickCount);
+                damgaVar = false; GUIUtility.hotControl = kontrolId; sahipKontrol = kontrolId;
+                Uygula(sonNokta, ekle);
                 e.Use();
             }
             else if (tip == EventType.MouseDrag)
             {
-                if (noktaGecerli) Sil(sonNokta);
+                if (aktifStroke == null) return;
+                if (noktaGecerli)
+                {
+                    float spacing = Mathf.Max(.25f, yaricap * .25f);
+                    float distance = Vector2.Distance(new Vector2(sonDamga.x, sonDamga.z), new Vector2(sonNokta.x, sonNokta.z));
+                    if (!damgaVar || distance >= spacing)
+                    {
+                        Vector3 from = sonDamga; int steps = Mathf.Clamp(Mathf.CeilToInt(distance / spacing), 1, 32);
+                        for (int i = 1; i <= steps; i++) Uygula(Vector3.Lerp(from, sonNokta, i / (float)steps), ekle);
+                    }
+                }
                 e.Use();
             }
             else if (tip == EventType.MouseUp)
             {
-                StrokeKapat();
+                StrokeKapat(); GUIUtility.hotControl = 0; sahipKontrol = 0;
                 e.Use();
             }
         }
@@ -389,6 +473,7 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
 
         foreach (var t in Terrain.activeTerrains)
         {
+            if (!VegetationBrushPaint.IsGroundTerrain(t)) continue;
             var col = t.GetComponent<TerrainCollider>();
             if (col == null) continue;
             RaycastHit hit;
@@ -411,7 +496,41 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
             gecmis.Add(aktifStroke);
             while (gecmis.Count > MaksStroke) gecmis.RemoveAt(0);
         }
-        aktifStroke = null;
+        aktifStroke = null; damgaVar = false;
+        Repaint();
+    }
+
+    void VarsayilanAgirlik(DetailPrototype p)
+    {
+        string key = VegetationBrushPaint.Key(p); if (bitkiAgirliklari.ContainsKey(key)) return;
+        string name = VegetationBrushPaint.Name(p).ToLowerInvariant();
+        bitkiAgirliklari[key] = name.Contains("fern") ? .65f : name.Contains("dry") ? .35f : 1f;
+    }
+
+    void Uygula(Vector3 merkez, bool ekle)
+    {
+        sonDamga = merkez; damgaVar = true;
+        if (!ekle)
+        {
+            if (mod == FircaModu.Sil) Sil(merkez);
+            else foreach (var t in Terrain.activeTerrains) if (VegetationBrushPaint.IsGroundTerrain(t)) DetaySil(t, merkez);
+            return;
+        }
+        foreach (var t in Terrain.activeTerrains)
+        {
+            if (!VegetationBrushPaint.IsGroundTerrain(t)) continue;
+            var palette = new List<VegetationBrushPaint.Choice>(); var prototypes = t.terrainData.detailPrototypes;
+            for (int i = 0; i < prototypes.Length; i++)
+            {
+                if (!VegetationBrushPaint.IsPlant(prototypes[i])) continue;
+                VarsayilanAgirlik(prototypes[i]);
+                palette.Add(new VegetationBrushPaint.Choice { layer = i, weight = bitkiAgirliklari[VegetationBrushPaint.Key(prototypes[i])] });
+            }
+            if (!ziyaretEdilen.TryGetValue(t.terrainData, out var visited)) ziyaretEdilen.Add(t.terrainData, visited = new HashSet<int>());
+            var result = VegetationBrushPaint.Paint(t, merkez, yaricap, yogunluk, yumusaklik, azamiEgim, engelleriKoru, palette, visited, rastgele);
+            foreach (var patch in result.patches) aktifStroke.detaylar.Add(new DetailYama { td = patch.data, katman = patch.layer, xBase = patch.x, yBase = patch.z, oncekiHarita = patch.before });
+            if (result.cells > 0) { toplamEklenen += result.cells; degisenTerrainler.Add(t); uzakKirli = true; }
+        }
         Repaint();
     }
 
@@ -503,7 +622,7 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
             if (degisen == 0) continue;
 
             td.SetDetailLayer(xBase, yBase, katman, harita);
-            toplamSilinenDetay += degisen;
+            toplamSilinenDetay += degisen; degisenTerrainler.Add(t); uzakKirli = true;
 
             if (aktifStroke != null)
             {
@@ -552,7 +671,7 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
 
         if (silinen.Count == 0) return;
 
-        td.SetTreeInstances(kalan.ToArray(), true);
+        td.SetTreeInstances(kalan.ToArray(), false);
         t.Flush();
         toplamSilinenAgac += silinen.Count;
 
@@ -597,11 +716,12 @@ public class FoggyRoad_BitkiSilgi : EditorWindow
 
             var liste = new List<TreeInstance>(td.treeInstances);
             liste.AddRange(kv.Value);
-            td.SetTreeInstances(liste.ToArray(), true);
+            td.SetTreeInstances(liste.ToArray(), false);
             EditorUtility.SetDirty(td);
         }
 
-        foreach (var t in Terrain.activeTerrains) t.Flush();
+        foreach (var t in Terrain.activeTerrains) { t.Flush(); if (VegetationBrushPaint.IsGroundTerrain(t)) degisenTerrainler.Add(t); }
+        uzakKirli = true;
 
         Debug.Log("[Bitki Silgisi] Son darbe geri alindi. Kalan gecmis: " + gecmis.Count);
         SceneView.RepaintAll();

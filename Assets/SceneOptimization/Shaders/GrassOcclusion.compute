@@ -1,0 +1,113 @@
+#pragma kernel CopyDepth
+#pragma kernel ReduceDepth
+#pragma kernel Cull
+
+// Pyramid stores the FARTHEST surface. A hole/sky pixel therefore prevents culling.
+Texture2D<float> _SourceDepth;
+Texture2D<float> _PyramidRead;
+RWTexture2D<float> _PyramidWrite;
+int2 _SourceSize, _OutputSize;
+int _ReadMip, _ReversedZ;
+
+[numthreads(8,8,1)]
+void CopyDepth(uint3 id : SV_DispatchThreadID)
+{
+ if(any(id.xy >= (uint2)_OutputSize)) return;
+ // Full-resolution copy into a power-of-two padded image: no holes lost by resampling.
+ float d = _ReversedZ != 0 ? 0 : 1;
+ if(all(id.xy < (uint2)_SourceSize)) d = _SourceDepth.Load(int3(id.xy,0));
+ _PyramidWrite[id.xy] = d;
+}
+[numthreads(8,8,1)]
+void ReduceDepth(uint3 id : SV_DispatchThreadID)
+{
+ if(any(id.xy >= (uint2)_OutputSize)) return;
+ uint2 p = id.xy * 2;
+ float d = _ReversedZ != 0 ? 1 : 0;
+ [unroll] for(int y=0;y<2;y++) [unroll] for(int x=0;x<2;x++)
+ {
+  float s = _PyramidRead.Load(int3(min(p+uint2(x,y),(uint2)_SourceSize-1),_ReadMip));
+  d = _ReversedZ != 0 ? min(d,s) : max(d,s);
+ }
+ _PyramidWrite[id.xy] = d;
+}
+
+struct GrassInstance {float4x4 objectToWorld;float4x4 inverseMatrix;float4 bounds;};
+StructuredBuffer<GrassInstance> _GrassInstances;
+StructuredBuffer<uint2> _PatchRanges;
+AppendStructuredBuffer<uint> _VisibleGrass;
+RWStructuredBuffer<uint> _Counters; // visible, occluded, distance, reserved, density
+float4x4 _ViewProjection;
+float4 _Planes[6];
+float4 _Eye, _DensityDistances, _DensityValues, _GrassRange;
+float4 _Viewport; // real depth width,height,pyramid width,height
+int _PatchCount, _MipCount;
+float _NearClip;
+
+float DensityCoverage(float3 origin,float d)
+{
+ float density=1;
+ if(_DensityDistances.w>.5)
+ {
+  float a=_DensityDistances.x,b=max(a+.001,_DensityDistances.y),c=max(b+.001,_DensityDistances.z);
+  density=d>b?lerp(_DensityValues.y,_DensityValues.z,smoothstep(b,c,d)):lerp(1,_DensityValues.y,smoothstep(a,b,d));
+ }
+ density=saturate(density*_DensityValues.x);
+ uint2 cell=(uint2)(int2)floor(origin.xz);uint h=cell.x*73856093u ^ cell.y*19349663u;h^=h>>13;
+ float fraction=(h&65535u)/65535.0;
+ float width=clamp(_DensityValues.w,.001,.1),rank=width+(1-2*width)*fraction;
+ return smoothstep(rank-width,rank+width,density);
+}
+bool Occluded(float3 center,float radius)
+{
+ // Project all eight corners of the wind-expanded bounding cube, never just its center.
+ float2 lo=1e8,hi=-1e8;float nearest=_ReversedZ!=0?0:1;
+ [unroll] for(uint corner=0;corner<8;corner++)
+ {
+  float3 sign=float3((corner&1)?1:-1,(corner&2)?1:-1,(corner&4)?1:-1);
+  float4 clip=mul(_ViewProjection,float4(center+sign*radius,1));
+  if(clip.w<=_NearClip) return false;
+  float3 ndc=clip.xyz/clip.w;
+  // The GPU path is restricted to D3D11/12, whose device depth is [0,1].
+  if(ndc.z<0 || ndc.z>1) return false;
+  float2 uv=ndc.xy*.5+.5;
+  // D3D texture rows start at the top, whereas clip-space Y points up.
+  // This conversion is required even when URP has flipped the projection for an RT.
+  uv.y=1-uv.y;lo=min(lo,uv);hi=max(hi,uv);
+  nearest=_ReversedZ!=0?max(nearest,ndc.z):min(nearest,ndc.z);
+ }
+ // A partially off-screen bound remains visible conservatively.
+ if(any(lo<0) || any(hi>1)) return false;
+ lo=lo*_Viewport.xy-2;hi=hi*_Viewport.xy+2;
+ if(any(lo<0) || any(hi>=_Viewport.xy)) return false;
+ float extent=max(hi.x-lo.x,hi.y-lo.y);
+ int mip=clamp((int)ceil(log2(max(1,extent))),0,_MipCount-1);
+ int2 a=(int2)floor(lo/exp2(mip)),b=(int2)floor(hi/exp2(mip));
+ float farthest=_ReversedZ!=0?1:0;
+ // At this mip the entire rectangle spans at most two texels per axis.
+ [loop] for(int y=a.y;y<=b.y;y++) [loop] for(int x=a.x;x<=b.x;x++)
+ {
+  float z=_PyramidRead.Load(int3(x,y,mip));
+  farthest=_ReversedZ!=0?min(farthest,z):max(farthest,z);
+ }
+ return _ReversedZ!=0 ? nearest<farthest-.00005 : nearest>farthest+.00005;
+}
+[numthreads(64,1,1)]
+void Cull(uint3 group : SV_GroupID,uint thread : SV_GroupIndex)
+{
+ if(group.x>=(uint)_PatchCount)return;
+ uint2 range=_PatchRanges[group.x];
+ for(uint i=thread;i<range.y;i+=64)
+ {
+  uint index=range.x+i;GrassInstance item=_GrassInstances[index];
+  float3 origin=float3(item.objectToWorld[0][3],item.objectToWorld[1][3],item.objectToWorld[2][3]);
+  float d=distance(origin,_Eye.xyz);
+  if(d>=_GrassRange.w || (_GrassRange.x>0 && d<=_GrassRange.x)){InterlockedAdd(_Counters[2],1);continue;}
+  bool inside=true;
+  [unroll] for(int p=0;p<6;p++) if(dot(_Planes[p].xyz,item.bounds.xyz)+_Planes[p].w < -item.bounds.w)inside=false;
+  if(!inside)continue;
+  if(DensityCoverage(origin,d)<=0){InterlockedAdd(_Counters[4],1);continue;}
+  if(Occluded(item.bounds.xyz,item.bounds.w)){InterlockedAdd(_Counters[1],1);continue;}
+  _VisibleGrass.Append(index);InterlockedAdd(_Counters[0],1);
+ }
+}

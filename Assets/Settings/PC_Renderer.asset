@@ -1,5 +1,33 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-9110866544174101008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a43c9bb649393e9439fd61a337d653be, type: 3}
+  m_Name: Visible far grass
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  grassCulling: {fileID: 7200000, guid: 6076a6861f513de4194b9223a9dffc0f, type: 3}
+  indirectGrassShader: {fileID: 4800000, guid: 2b97dced7f0ee664697f9e5b8f5ca23a, type: 3}
+--- !u!114 &-8290417296177521391
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 558cb8c953fffae49aef5c3d3013d3e3, type: 3}
+  m_Name: Glass shared atlas
+  m_EditorClassIdentifier: 
+  m_Active: 1
 --- !u!114 &-7611224588351574009
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -48,6 +76,8 @@ MonoBehaviour:
   - {fileID: 7833122117494664109}
   - {fileID: -7611224588351574009}
   - {fileID: 654321987654321234}
+  - {fileID: -8290417296177521391}
+  - {fileID: -9110866544174101008}
   m_RendererFeatureMap: ad6b866f10d7b46c07f09519907f5f965204dd8a619e1409
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}

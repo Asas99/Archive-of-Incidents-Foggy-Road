@@ -13,6 +13,9 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
     public sealed class WindowGroup
     {
         public string name;
+        [Tooltip("Brief live reflection on actor arrival, then baked until a new arrival.")] public bool arrivalBurstOnly;
+        [Min(.1f)] public float arrivalBurstSeconds=2;
+        [NonSerialized] internal GlassArrivalBurst arrivalBurst=new GlassArrivalBurst();
         public Transform plane;
         public Vector3 localPoint;
         public Vector3 localNormal = Vector3.forward;
@@ -23,6 +26,7 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
         [NonSerialized] internal Matrix4x4 vp;
         [NonSerialized] internal double lastUpdate = -100;
         [NonSerialized] internal bool ready;
+        [NonSerialized] internal int lastCaptureFrame=-1;
         [NonSerialized] internal int side;
         [NonSerialized] internal Vector3 lastPoint, lastNormal;
         [NonSerialized] internal float liveWeight;
@@ -30,6 +34,7 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
         [NonSerialized] internal bool activity;
         [NonSerialized] internal string reason="Baked";
         [NonSerialized] internal int sourceId;
+        [NonSerialized] internal readonly HashSet<ReflectionActor> nearbyActors = new HashSet<ReflectionActor>();
     }
 
     public Camera playerCamera;
@@ -142,6 +147,7 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
 
     void Render(WindowGroup group, Camera source, Vector3 point, Vector3 normal)
     {
+        if(UsesAtlas){QueueAtlas(group,source,point,normal);return;}
         if (!group.camera)
         {
             var go = new GameObject("Glass Reflection - " + group.name) { hideFlags = HideFlags.HideAndDontSave };
@@ -152,10 +158,11 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
         var camera = group.camera;
         int width=Mathf.Max(64,Mathf.RoundToInt(source.pixelWidth*resolutionScale));
         int height=Mathf.Max(64,Mathf.RoundToInt(source.pixelHeight*resolutionScale));
+        if(Lean(this)){float cap=Mathf.Min(1,Mathf.Min(960f/width,540f/height));width=Mathf.Max(64,Mathf.RoundToInt(width*cap));height=Mathf.Max(64,Mathf.RoundToInt(height*cap));}
         if (!group.texture || group.texture.width != width || group.texture.height != height)
         {
             if (group.texture) { group.texture.Release(); DestroyResource(group.texture); }
-            var format=SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.ARGBHalf) ? RenderTextureFormat.ARGBHalf : RenderTextureFormat.DefaultHDR;
+            var format=SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.ARGBHalf) ? RenderTextureFormat.ARGBHalf : (Lean(this)?RenderTextureFormat.ARGB32:RenderTextureFormat.DefaultHDR);
             group.texture=new RenderTexture(width,height,24,format) { name="Glass HDR - " + group.name, hideFlags=HideFlags.HideAndDontSave, useMipMap=true, autoGenerateMips=false, filterMode=FilterMode.Trilinear, wrapMode=TextureWrapMode.Clamp, antiAliasing=1 };
             group.texture.Create(); group.ready=false;
         }
@@ -165,10 +172,11 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
         // A body hidden from the first-person camera can still exist in reflections.
         camera.cullingMask=reflectionLayers.value;
         camera.allowMSAA=false; camera.allowHDR=true;
+        if(Lean(this)){camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=Color.clear;}
         var data=camera.GetUniversalAdditionalCameraData();
         data.renderType=CameraRenderType.Base; data.renderPostProcessing=false;
         data.requiresColorTexture=false; data.requiresDepthTexture=false;
-        data.renderShadows=reflectShadows; data.SetRenderer(reflectionRendererIndex);
+        data.renderShadows=!Lean(this)&&reflectShadows; data.SetRenderer(Lean(this)?dynamicRendererIndex:reflectionRendererIndex);
         data.antialiasing=AntialiasingMode.None;
         float d=-Vector3.Dot(normal,point);
         Matrix4x4 mirror=ReflectionMatrix(new Vector4(normal.x,normal.y,normal.z,d));
@@ -177,7 +185,8 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
         camera.worldToCameraMatrix=source.worldToCameraMatrix*mirror;
         Vector3 clipPosition=camera.worldToCameraMatrix.MultiplyPoint(point+normal*clipOffset);
         Vector3 clipNormal=camera.worldToCameraMatrix.MultiplyVector(normal).normalized;
-        camera.projectionMatrix=source.CalculateObliqueMatrix(new Vector4(clipNormal.x,clipNormal.y,clipNormal.z,-Vector3.Dot(clipPosition,clipNormal)));
+        camera.farClipPlane=Mathf.Max(source.nearClipPlane+.01f,Lean(this)?Mathf.Min(source.farClipPlane,Vector3.Distance(source.transform.position,point)+Mathf.Max(1,reflectionSceneDepth)):source.farClipPlane);
+        camera.projectionMatrix=CaptureProjection(source,point,normal,camera.worldToCameraMatrix);
         camera.cullingMatrix=camera.projectionMatrix*camera.worldToCameraMatrix;
         group.vp=GL.GetGPUProjectionMatrix(camera.projectionMatrix,true)*camera.worldToCameraMatrix;
         bool oldInvert=GL.invertCulling;
@@ -187,11 +196,14 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
         {
             GL.invertCulling=!oldInvert;
             Shader.SetGlobalFloat(RenderingId,1);
+            if(Lean(this)){GatherDynamicModels(group,source);DynamicCapture=this;CaptureCamera=camera;}
             request.destination=group.texture;
+            CameraRenderRequests++;
             UnityEngine.Rendering.RenderPipeline.SubmitRenderRequest(camera,request);
             TotalCaptures++; CapturesThisTick++;
             group.texture.GenerateMips();
             group.ready=true;
+            if(Lean(this))RememberDynamic(group,source);
         }
         catch (Exception exception)
         {
@@ -200,6 +212,7 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
         }
         finally
         {
+            if(DynamicCapture==this){DynamicCapture=null;CaptureCamera=null;}
             GL.invertCulling=oldInvert;
             Shader.SetGlobalFloat(RenderingId,oldRendering);
             Profiler.EndSample();
@@ -218,19 +231,25 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
         return matrix;
     }
 
-    void Apply(WindowGroup group,float weight)
+    void Apply(WindowGroup group,float weight,WindowGroup captureSource=null)
     {
         if (block == null) block = new MaterialPropertyBlock();
+        var captured=captureSource??group;
         foreach (var window in group.windows)
         {
             if (!window) continue;
             window.GetPropertyBlock(block);
             block.SetFloat(WeightId,weight);
+            block.SetFloat("_DynamicOverlay",Lean(this)?1:0);
+            block.SetFloat("_DynamicStrength",nearProfileEnabled&&UsesAtlas?dynamicReflectionStrength:1);
+            block.SetFloat("_DynamicDebug",(float)dynamicDebug);
             block.SetFloat("_TransmissionReady",transmissionReady ? 1 : 0);
+            block.SetFloat("_TransmissionSamples",transmissionQuality==TransmissionQuality.High?4:transmissionQuality==TransmissionQuality.Balanced?2:0);
             SetBakedProperties(block,group);
-            block.SetTexture(TextureId,group.texture ? group.texture : Texture2D.blackTexture);
-            block.SetMatrix(MatrixId,group.vp);
-            block.SetFloat(MipId,group.texture ? Mathf.Log(Mathf.Max(group.texture.width,group.texture.height),2) : 0);
+            block.SetTexture(TextureId,UsesAtlas&&atlas ? atlas : captured.texture ? captured.texture : Texture2D.blackTexture);
+            block.SetVector("_PlanarAtlasRect",UsesAtlas?AtlasRect(captured):new Vector4(1,1,0,0));
+            block.SetMatrix(MatrixId,captured.vp);
+            block.SetFloat(MipId,UsesAtlas?dynamicMipLimit:captured.texture ? Mathf.Log(Mathf.Max(captured.texture.width,captured.texture.height),2) : 0);
             window.SetPropertyBlock(block);
         }
     }
@@ -293,7 +312,7 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
         if(transmissionCamera && (!visible || transmissionCamera.GetComponent<Camera>()!=source))
         { transmissionCamera.requiresColorOption=previousColourOption; transmissionCamera=null; }
         transmissionReady=false;
-        if(!visible || !source) return;
+        if(!visible || !source || transmissionQuality==TransmissionQuality.Off) return;
         if(source.cameraType==CameraType.SceneView)
         { transmissionReady=((UniversalRenderPipelineAsset)GraphicsSettings.currentRenderPipeline).supportsCameraOpaqueTexture; return; }
         var data=source.GetUniversalAdditionalCameraData();
@@ -306,7 +325,7 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
         #if UNITY_EDITOR
         UnityEditor.EditorApplication.update -= EditorPreview;
         #endif
-        ResetWeights(); lastCaptureFrame=-1;
+        ResetWeights(); lastCaptureFrame=-1;ReleaseDynamicMaterials();ReleaseAtlas();
         foreach(var group in groups)
         {
             if(group.camera) { group.camera.targetTexture=null; DestroyResource(group.camera.gameObject); }
@@ -327,3 +346,5 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
         if(Application.isPlaying) Destroy(resource); else DestroyImmediate(resource);
     }
 }
+
+

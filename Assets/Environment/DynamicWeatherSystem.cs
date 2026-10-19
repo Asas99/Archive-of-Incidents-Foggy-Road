@@ -132,7 +132,7 @@ public sealed class DynamicWeatherSystem : MonoBehaviour
         // threshold has to stay beyond what the player can actually make out through the fog.
         // Bu blok artik sadece acik acik istenirse calisir; kapaliyken sahnedeki Terrain
         // ayarlarina hic dokunulmaz.
-        if (!overrideTerrainSettings) return;
+        if (!overrideTerrainSettings || GetComponentInParent<SceneOptimizationController>() || FindFirstObjectByType<SceneOptimizationController>()) return;
 
         foreach (Terrain terrain in Terrain.activeTerrains)
         {

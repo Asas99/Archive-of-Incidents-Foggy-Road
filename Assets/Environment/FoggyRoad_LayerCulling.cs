@@ -30,7 +30,7 @@ public class FoggyRoad_LayerCulling : MonoBehaviour
         if (mesafeler == null || mesafeler.Length != 32) mesafeler = new float[32];
 
         // 0 = kameranin kendi farClip'i kullanilir
-        for (int i = 0; i < 32; i++) mesafeler[i] = 0f;
+        // Preserve distances owned by other systems.
 
         int g = LayerMask.NameToLayer(bariyerLayer);
         if (g >= 0) mesafeler[g] = bariyerMesafe;
