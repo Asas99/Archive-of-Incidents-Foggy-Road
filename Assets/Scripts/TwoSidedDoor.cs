@@ -7,12 +7,24 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class TwoSidedDoor : MonoBehaviour
 {
+    public enum OpeningDirection
+    {
+        [InspectorName("Otomatik (oyuncudan uzağa)")] Automatic = 0,
+        [InspectorName("İçeri")] Inward = 1,
+        [InspectorName("Dışarı")] Outward = 2
+    }
+
     [Header("Interaction")]
     [SerializeField, Min(0.1f)] private float interactionRange = 3f;
     [SerializeField] private KeyCode interactKey = KeyCode.E;
     [SerializeField] private bool allowLeftClick = true;
 
     [Header("Motion")]
+    [SerializeField, InspectorName("Açılma Yönü")]
+    private OpeningDirection openingDirection = OpeningDirection.Automatic;
+    [SerializeField, InspectorName("İç / Dış Yönünü Ters Çevir")]
+    [Tooltip("İçeri yönü kapalı menteşenin yerel +Y tarafıdır. Kapı ters yerleştirildiyse bu seçeneği açın.")]
+    private bool invertOpeningDirection;
     [SerializeField, Range(1f, 170f)] private float openAngle = 92f;
     [SerializeField, Min(1f)] private float degreesPerSecond = 240f;
 
@@ -79,6 +91,16 @@ public sealed class TwoSidedDoor : MonoBehaviour
         if (isOpen)
         {
             isOpen = false;
+            return;
+        }
+
+        if (openingDirection != OpeningDirection.Automatic)
+        {
+            // The panel extends along local +X; positive Z swings toward local +Y.
+            openedAngle = openingDirection == OpeningDirection.Inward ? openAngle : -openAngle;
+            if (invertOpeningDirection)
+                openedAngle = -openedAngle;
+            isOpen = true;
             return;
         }
 
