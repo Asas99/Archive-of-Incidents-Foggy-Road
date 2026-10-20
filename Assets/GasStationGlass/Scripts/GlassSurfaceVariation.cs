@@ -226,6 +226,15 @@ public sealed class GlassSurfaceVariation : MonoBehaviour
     public void EditorRefresh()
     {
         if(!this || Application.isPlaying || UnityEditor.EditorApplication.isCompiling || !gameObject.scene.IsValid()) return;
+        // Static batching rewrites object-space vertices, invalidating _PaneU/_PaneV.
+        // Keep other static flags, including lighting and occlusion, intact.
+        var flags=UnityEditor.GameObjectUtility.GetStaticEditorFlags(gameObject);
+        bool batchingChanged=UsesGlass(Surface) && (flags & UnityEditor.StaticEditorFlags.BatchingStatic)!=0;
+        if(batchingChanged)
+        {
+            UnityEditor.GameObjectUtility.SetStaticEditorFlags(gameObject,flags & ~UnityEditor.StaticEditorFlags.BatchingStatic);
+            UnityEditor.PrefabUtility.RecordPrefabInstancePropertyModifications(gameObject);
+        }
         string oldId=stableId,oldOwner=editorOwner; int oldVariant=surfaceVariant; Vector4 oldU=paneU,oldV=paneV; var oldMesh=bakedMesh;
         var owner=UnityEditor.GlobalObjectId.GetGlobalObjectIdSlow(this);
         if(owner.targetObjectId!=0 && !string.IsNullOrEmpty(gameObject.scene.path))
@@ -240,7 +249,7 @@ public sealed class GlassSurfaceVariation : MonoBehaviour
         if(regroup || !UsesGlass(Surface)) foreach(var manager in FindObjectsByType<GasStationPlanarGlass>(FindObjectsSortMode.None)) manager.UnregisterWindow(Surface);
         editorMatrix=matrix; editorMatrixKnown=true;
         Apply(); RegisterReflection();
-        if(oldId!=stableId || oldOwner!=editorOwner || oldVariant!=surfaceVariant || regroup)
+        if(batchingChanged || oldId!=stableId || oldOwner!=editorOwner || oldVariant!=surfaceVariant || regroup)
         {
             UnityEditor.EditorUtility.SetDirty(this);
             UnityEditor.PrefabUtility.RecordPrefabInstancePropertyModifications(this);

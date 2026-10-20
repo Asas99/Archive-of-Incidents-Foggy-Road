@@ -25,6 +25,9 @@ namespace FoggyRoadTools.MeshEdgeSnap
 {
     public class GuardrailMeshEdgeSnapPRO : EditorWindow
     {
+        // Widen curved, common-pivot modules without rotating them around the FBX origin.
+        public static Mesh WidenExistingModule(Mesh original, Transform transform, bool left, RoadBarrierAdapter adapter)
+            => adapter.Deform(original, transform, left);
         [Serializable]
         private struct BoundarySegment
         {
@@ -118,6 +121,7 @@ namespace FoggyRoadTools.MeshEdgeSnap
 
             EditorGUILayout.Space(8);
             EditorGUILayout.LabelField("GUARDRAIL MESH EDGE SNAP PRO", EditorStyles.boldLabel);
+            if (GUILayout.Button("Yolu %50 Genislet / Terrain / Geri Al")) RoadWidthWindow.Open();
 
             EditorGUILayout.HelpBox(
                 "This version reads the actual OUTER EDGES of the road mesh. " +

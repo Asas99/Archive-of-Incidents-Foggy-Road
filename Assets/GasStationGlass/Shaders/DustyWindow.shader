@@ -42,7 +42,8 @@ Shader "FoggyRoad/Gas Station/Dusty Window"
     }
     SubShader
     {
-        Tags { "RenderPipeline"="UniversalPipeline" "Queue"="Transparent" "RenderType"="Transparent" }
+        // The per-pane dust coordinates use the original object-space vertices.
+        Tags { "RenderPipeline"="UniversalPipeline" "Queue"="Transparent" "RenderType"="Transparent" "DisableBatching"="True" }
         Pass
         {
             Name "Glass"

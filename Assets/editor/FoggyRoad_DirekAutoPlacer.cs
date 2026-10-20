@@ -70,6 +70,13 @@ namespace FoggyRoadTools.Direk
         [SerializeField] int wireCount = 2;
         [SerializeField] float sagRatio = 0.030f;
         [SerializeField] float wireRadius = 0.045f;
+        [SerializeField] float existingBarrierClearance = 1f;
+
+        // Keep existing objects and their ordered cable connections when the road changes.
+        public static string MevcutDirekleriYolaUyarla(GameObject road, float clearance = 1f)
+        {
+            return PowerPoleRoadAlignment.Align(road, clearance);
+        }
 
         // mesh kaynagi parametreleri
         [SerializeField] float cellSize = 0.25f;
@@ -109,6 +116,10 @@ namespace FoggyRoadTools.Direk
 
         void HedefleriBul()
         {
+            if (roadObject == null)
+                foreach (MeshFilter candidate in Object.FindObjectsByType<MeshFilter>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                    if (candidate.name == "NurbsPath_ROAD" && candidate.gameObject.scene == SceneManager.GetActiveScene())
+                    { roadObject = candidate.gameObject; break; }
             if (roadObject == null) roadObject = YolHatti.BulYol();
             if (poleSource == null)
             {
@@ -145,6 +156,14 @@ namespace FoggyRoadTools.Direk
                 new GUIContent("Direk prefab / FBX"), poleSource, typeof(GameObject), false);
             roadObject = (GameObject)EditorGUILayout.ObjectField(
                 new GUIContent("Yol objesi (mesh kaynagi icin)"), roadObject, typeof(GameObject), true);
+
+            existingBarrierClearance = EditorGUILayout.Slider("Mevcut direk: bariyer payi (m)", existingBarrierClearance, .5f, 4f);
+            using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode || StaticOcclusionCulling.isRunning))
+                if (GUILayout.Button("Mevcut direkleri yol/bariyer disina al ve kabloyu yenile"))
+                {
+                    try { Durum(MevcutDirekleriYolaUyarla(roadObject, existingBarrierClearance), MessageType.Info); }
+                    catch (System.Exception e) { Durum(e.Message, MessageType.Error); Debug.LogException(e); }
+                }
 
             if (poleSource != null &&
                 AssetDatabase.LoadAssetAtPath<GameObject>(FoggyRoad_PowerLineAssets.DirekPrefabYolu) == null)

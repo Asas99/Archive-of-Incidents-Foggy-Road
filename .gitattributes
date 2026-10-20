@@ -170,3 +170,8 @@ Packages/packages-lock.json linguist-generated
 
 # Exceptions for .asset files such as lightning pre-baking
 LightingData.asset     binary
+
+# Native Unity TerrainData and binary grass cache: preserve bytes on every platform.
+Assets/RoadTool/GeneratedWidth150/MainTerrain.asset binary -unity-yaml -eol
+Assets/RoadTool/GeneratedWidth150/SmallVegetation.asset binary -unity-yaml -eol
+Assets/SceneOptimization/Generated/FarGrass_f84e0910ff7366445b73fd0f9b69516b.asset binary -unity-yaml -eol
