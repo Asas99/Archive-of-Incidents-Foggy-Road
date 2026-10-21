@@ -29,7 +29,16 @@ public sealed class StationShadowCaster : MonoBehaviour
     }
 
     private void OnEnable() => Synchronize();
-    private void LateUpdate() => Synchronize();
+
+    // The proxy shares its source's transform hierarchy, so it follows moving doors
+    // without a per-frame sync while the game is running. Keep the editor refresh for
+    // authoring-time material and renderer changes.
+    private void LateUpdate()
+    {
+        #if UNITY_EDITOR
+        if (!Application.isPlaying) Synchronize();
+        #endif
+    }
 
     private void Synchronize()
     {
