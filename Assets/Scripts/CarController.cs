@@ -9,8 +9,6 @@ public class CarController : MonoBehaviour
     [Header("Enter / Exit")]
     [SerializeField] private Transform seatPoint;
     [SerializeField] private Transform exitPoint;
-    [SerializeField] private float enterDistance = 10f;
-    [SerializeField] private KeyCode enterExitKey = KeyCode.E;
     [SerializeField] private bool showHelpText = true;
 
     [Header("Camera Look")]
@@ -115,14 +113,14 @@ public class CarController : MonoBehaviour
     private float shiftTimer;
     // -1 = reverse, 0 = neutral, 1..N = forward gears.
     private int currentGear = 1;
-    private string message = "Arabaya yaklas: E ile bin.";
+    private string message = "Ortadaki noktayla arabaya bak: E ile bin (4 m).";
     private Vector3 steeringWheelBasePosition;
     private Vector3 steeringWheelPivotOffset;
     private Quaternion steeringWheelBaseRotation;
     private Quaternion frontLeftWheelBaseRotation;
     private Quaternion frontRightWheelBaseRotation;
 
-    private bool HasDriver => driverController != null;
+    public bool HasDriver => driverController != null;
     private float SpeedKmh => rb.linearVelocity.magnitude * 3.6f;
     private float FuelPercent => fuelAmount * 100f;
     private Vector3 DriveForward => useLocalXAxisForForward ? transform.right : transform.forward;
@@ -163,18 +161,6 @@ public class CarController : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(enterExitKey))
-        {
-            if (HasDriver)
-            {
-                ExitCar();
-            }
-            else
-            {
-                TryEnterCar();
-            }
-        }
-
         UpdateSpeedometerVisual();
         UpdateRpmVisual();
         UpdateFuelState();
@@ -182,12 +168,7 @@ public class CarController : MonoBehaviour
 
         if (!HasDriver)
         {
-            CharacterController nearest = FindNearestCharacter(out float distance);
-            message = nearest == null
-                ? "Sahnede CharacterController olan karakter bulunamadi."
-                : distance <= enterDistance
-                    ? "E - Arabaya bin"
-                    : "Arabaya yaklas: E ile bin.";
+            message = "Ortadaki noktayla arabaya bak: E ile bin (4 m).";
             return;
         }
 
@@ -240,54 +221,13 @@ public class CarController : MonoBehaviour
         }
     }
 
-    private void TryEnterCar()
+    // Target and range are validated by PlayerInteraction before this call.
+    public bool TryEnterCar(CharacterController character)
     {
-        CharacterController nearest = FindNearestCharacter(out float distance);
-        if (nearest == null)
-        {
-            message = "Binilemedi: CharacterController olan karakter yok.";
-            return;
-        }
-
-        if (distance > enterDistance)
-        {
-            message = $"Cok uzaksin ({distance:0.0}m). Arabaya yaklas.";
-            return;
-        }
-
-        EnterCar(nearest);
-    }
-
-    private CharacterController FindNearestCharacter(out float nearestDistance)
-    {
-        if (vehicleCollider == null)
-        {
-            vehicleCollider = GetComponent<Collider>();
-        }
-
-        CharacterController[] controllers = FindObjectsByType<CharacterController>(FindObjectsSortMode.None);
-        CharacterController nearest = null;
-        nearestDistance = float.MaxValue;
-
-        foreach (CharacterController controller in controllers)
-        {
-            if (!controller.gameObject.activeInHierarchy)
-            {
-                continue;
-            }
-
-            Vector3 nearestVehiclePoint = vehicleCollider != null
-                ? vehicleCollider.ClosestPoint(controller.transform.position)
-                : transform.position;
-            float distance = Vector3.Distance(nearestVehiclePoint, controller.transform.position);
-            if (distance < nearestDistance)
-            {
-                nearest = controller;
-                nearestDistance = distance;
-            }
-        }
-
-        return nearest;
+        if (HasDriver || character == null || !character.enabled || !character.gameObject.activeInHierarchy)
+            return false;
+        EnterCar(character);
+        return true;
     }
 
     private void EnterCar(CharacterController character)
@@ -305,7 +245,7 @@ public class CarController : MonoBehaviour
         disabledDriverColliders.Clear();
         foreach (MonoBehaviour script in driverTransform.GetComponents<MonoBehaviour>())
         {
-            if (script.enabled)
+            if (script.enabled && !(script is PlayerInteraction))
             {
                 script.enabled = false;
                 disabledDriverScripts.Add(script);
@@ -328,8 +268,9 @@ public class CarController : MonoBehaviour
         message = "Arabaya bindin. W gaz, S fren/geri, A/D direksiyon, Space el freni, E in.";
     }
 
-    private void ExitCar()
+    public void ExitCar()
     {
+        if (!HasDriver) return;
         if (driverCamera != null)
         {
             driverCamera.localRotation = originalCameraLocalRotation;

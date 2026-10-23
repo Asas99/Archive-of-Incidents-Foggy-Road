@@ -18,6 +18,8 @@ public sealed class VegetationOptimizationSettings
  public float farDensityMid, farDensityLow, farDensityFadeHalfWidth;
  public float smallVegetationStart, smallVegetationEnd, treeStart, treeEnd;
  public float treeBillboardDistance, treeCrossFadeLength;
+ public float treeDensity=1,nativeGrassDensity=1,treeLodBias=1;
+ public int fullTrees=400;
 
  public static VegetationOptimizationSettings Read(SceneOptimizationProfile p)
  {
@@ -28,6 +30,8 @@ public sealed class VegetationOptimizationSettings
  static float Safe(float value, float fallback) => float.IsNaN(value) || float.IsInfinity(value) ? fallback : value;
  public void Normalize()
  {
+  treeDensity=Mathf.Clamp01(Safe(treeDensity,1)); nativeGrassDensity=Mathf.Clamp01(Safe(nativeGrassDensity,1));
+  treeLodBias=Mathf.Clamp(Safe(treeLodBias,1),.1f,3);fullTrees=Mathf.Clamp(fullTrees,0,10000);
   farGrassEnd = Mathf.Clamp(Safe(farGrassEnd, 90), 5, 250);
   grassEnd = Mathf.Clamp(Safe(grassEnd, 30), 1, Mathf.Min(80, farGrassEnd));
   grassStart = Mathf.Clamp(Safe(grassStart, grassEnd - 10), 0, grassEnd - .1f);
@@ -113,6 +117,7 @@ public static class VegetationOptimizationStorage
   foreach (var t in c.terrains.Where(t => t))
   {
    t.detailObjectDistance = c.profile.grassEnd; t.treeDistance = c.profile.treeEnd;
+   t.treeMaximumFullLODCount=c.profile.fullTrees;t.treeLODBiasMultiplier=c.profile.treeLodBias;
    t.treeBillboardDistance = c.profile.treeBillboardDistance; t.treeCrossFadeLength = c.profile.treeCrossFadeLength;
    EditorUtility.SetDirty(t);
   }
@@ -160,6 +165,7 @@ public sealed class VegetationOptimizationWindow : EditorWindow
  void OnGUI()
  {
   FindController(); scroll = EditorGUILayout.BeginScrollView(scroll);
+  if(GUILayout.Button("Gelişmiş Ağaç ve Çimen Laboratuvarı",GUILayout.Height(28))) VegetationLabWindow.Open();
   EditorGUI.BeginChangeCheck(); var chosen = (SceneOptimizationController)EditorGUILayout.ObjectField("Sahne kontrolcüsü", controller, typeof(SceneOptimizationController), true);
   if (EditorGUI.EndChangeCheck()) { controller = chosen; draft = null; if (controller && controller.profile) Reload(); }
   if (!controller || !controller.profile) { EditorGUILayout.HelpBox("Açık sahnedeki mevcut SceneOptimizationController ve profilini seç. Araç ikinci bir kontrolcü oluşturmaz.", MessageType.Info); EditorGUILayout.EndScrollView(); return; }

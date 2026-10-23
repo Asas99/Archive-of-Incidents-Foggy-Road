@@ -12,34 +12,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a1291555a7f4ff680e6498a9fe50cc9, type: 3}
   m_Name: Balanced
   m_EditorClassIdentifier: 
-  grassStart: 25
-  grassEnd: 35
+  grassStart: 20
+  grassEnd: 25
   smallStart: 65
   smallEnd: 80
   mediumStart: 100
   mediumEnd: 120
-  treeStart: 270
-  treeEnd: 300
+  treeStart: 195
+  treeEnd: 220
   farGrassStart: 0
   farGrassFull: 0
-  farGrassFade: 78
-  farGrassEnd: 90
-  farGrassDensity: 1
+  farGrassFade: 56.333332
+  farGrassEnd: 65
+  farGrassDensity: 0.65
   farGrassDistanceThinning: 1
   farGrassGpuOcclusion: 1
-  farDensityFullDistance: 25
-  farDensityMidDistance: 55
-  farDensityLowDistance: 78
+  farDensityFullDistance: 18.055557
+  farDensityMidDistance: 39.72222
+  farDensityLowDistance: 56.333332
   farDensityMid: 0.5
   farDensityLow: 0.5
   farDensityFadeHalfWidth: 0.04
   smallVegetationStart: 80
   smallVegetationEnd: 100
-  treeBillboardDistance: 200
-  treeCrossFadeLength: 40
+  treeBillboardDistance: 70
+  treeCrossFadeLength: 20
   lodBias: 1.2
   shadowDistance: 68.53581
   heightmapPixelError: 4
   shadowAtlas: 2048
   shadowCascades: 2
-  fullTrees: 400
+  fullTrees: 150
+  treeDensity: 1
+  nativeGrassDensity: 0.65
+  treeLodBias: 0.6

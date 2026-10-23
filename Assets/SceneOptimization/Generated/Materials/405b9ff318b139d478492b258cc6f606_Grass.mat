@@ -92,8 +92,8 @@ Material:
     m_Ints: []
     m_Floats:
     - Animation_Cutoff: 30
-    - Distance_Fade_End: 35
-    - Distance_Fade_Start: 25
+    - Distance_Fade_End: 25
+    - Distance_Fade_Start: 20
     - Dither_Scale: 2.108
     - Enable_Blend_Terrain_Color: 0
     - Terrain_Blend_A: 0

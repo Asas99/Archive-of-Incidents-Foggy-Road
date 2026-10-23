@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -7,6 +8,9 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class TwoSidedDoor : MonoBehaviour
 {
+    private static readonly HashSet<TwoSidedDoor> activeDoors = new HashSet<TwoSidedDoor>();
+    private Bounds interactionBounds;
+    private bool hasInteractionBounds;
     public enum OpeningDirection
     {
         [InspectorName("Otomatik (oyuncudan uzağa)")] Automatic = 0,
@@ -15,8 +19,6 @@ public sealed class TwoSidedDoor : MonoBehaviour
     }
 
     [Header("Interaction")]
-    [SerializeField, Min(0.1f)] private float interactionRange = 3f;
-    [SerializeField] private KeyCode interactKey = KeyCode.E;
     [SerializeField] private bool allowLeftClick = true;
 
     [Header("Motion")]
@@ -28,7 +30,7 @@ public sealed class TwoSidedDoor : MonoBehaviour
     [SerializeField, Range(1f, 170f)] private float openAngle = 92f;
     [SerializeField, Min(1f)] private float degreesPerSecond = 240f;
 
-    private Camera playerCamera;
+    public bool AllowLeftClick => allowLeftClick;
     private Quaternion closedLocalRotation;
     private float openedAngle;
     private bool isOpen;
@@ -36,17 +38,62 @@ public sealed class TwoSidedDoor : MonoBehaviour
     private void Awake()
     {
         closedLocalRotation = transform.localRotation;
-        playerCamera = FindPlayerCamera();
+        CacheInteractionBounds();
+        if (isActiveAndEnabled) activeDoors.Add(this);
+    }
+
+    private void OnEnable() { activeDoors.Add(this); }
+    private void OnDisable() { activeDoors.Remove(this); }
+    private void OnDestroy() { activeDoors.Remove(this); }
+
+    private void CacheInteractionBounds()
+    {
+        hasInteractionBounds = false;
+        // Use the whole moving panel, including edges and handles. Some scene
+        // colliders cover only part of the mesh; leave their physical shape intact.
+        foreach (MeshFilter filter in GetComponentsInChildren<MeshFilter>())
+        {
+            var renderer = filter.GetComponent<Renderer>();
+            if (filter.sharedMesh == null || renderer == null || !renderer.enabled ||
+                renderer.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly)
+                continue;
+            Bounds bounds = filter.sharedMesh.bounds;
+            Matrix4x4 toDoor = transform.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+            for (int corner = 0; corner < 8; corner++)
+            {
+                Vector3 point = bounds.center + Vector3.Scale(bounds.extents, new Vector3(
+                    (corner & 1) == 0 ? -1f : 1f,
+                    (corner & 2) == 0 ? -1f : 1f,
+                    (corner & 4) == 0 ? -1f : 1f));
+                point = toDoor.MultiplyPoint3x4(point);
+                if (!hasInteractionBounds) { interactionBounds = new Bounds(point, Vector3.zero); hasInteractionBounds = true; }
+                else interactionBounds.Encapsulate(point);
+            }
+        }
+    }
+
+    public static TwoSidedDoor FindInteractionTarget(Ray worldRay, float unobstructedDistance)
+    {
+        TwoSidedDoor nearest = null;
+        float nearestDistance = unobstructedDistance;
+        foreach (TwoSidedDoor door in activeDoors)
+        {
+            if (door == null || !door.isActiveAndEnabled || !door.hasInteractionBounds) continue;
+            Ray localRay = new Ray(door.transform.InverseTransformPoint(worldRay.origin),
+                door.transform.InverseTransformVector(worldRay.direction));
+            if (!door.interactionBounds.IntersectRay(localRay, out float localDistance)) continue;
+            Vector3 worldPoint = door.transform.TransformPoint(localRay.GetPoint(localDistance));
+            float distance = Vector3.Distance(worldRay.origin, worldPoint);
+            // A wall/other physical target in front of the panel still blocks it.
+            if (distance > nearestDistance) continue;
+            nearestDistance = distance;
+            nearest = door;
+        }
+        return nearest;
     }
 
     private void Update()
     {
-        if (playerCamera == null)
-            playerCamera = FindPlayerCamera();
-
-        if (playerCamera != null && WantsToInteract() && IsAimingAtThisDoor())
-            Toggle(playerCamera.transform.position);
-
         Quaternion targetRotation = isOpen
             ? closedLocalRotation * Quaternion.AngleAxis(openedAngle, Vector3.forward)
             : closedLocalRotation;
@@ -57,36 +104,7 @@ public sealed class TwoSidedDoor : MonoBehaviour
             degreesPerSecond * Time.deltaTime);
     }
 
-    private bool WantsToInteract()
-    {
-        return Input.GetKeyDown(interactKey) ||
-               (allowLeftClick && Input.GetMouseButtonDown(0));
-    }
-
-    private bool IsAimingAtThisDoor()
-    {
-        Ray ray = GetInteractionRay();
-        if (!Physics.Raycast(ray, out RaycastHit hit, interactionRange,
-                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
-            return false;
-
-        return hit.collider.GetComponentInParent<TwoSidedDoor>() == this;
-    }
-
-    private Ray GetInteractionRay()
-    {
-        bool cursorIsFree = Cursor.lockState == CursorLockMode.None &&
-                            Input.mousePosition.x >= 0f && Input.mousePosition.x <= Screen.width &&
-                            Input.mousePosition.y >= 0f && Input.mousePosition.y <= Screen.height;
-
-        Vector3 screenPoint = cursorIsFree
-            ? Input.mousePosition
-            : new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
-
-        return playerCamera.ScreenPointToRay(screenPoint);
-    }
-
-    private void Toggle(Vector3 playerPosition)
+    public void Interact(Vector3 playerPosition, Vector3 viewDirection)
     {
         if (isOpen)
         {
@@ -108,21 +126,10 @@ public sealed class TwoSidedDoor : MonoBehaviour
         // swing direction on each side so the panel moves away from the player.
         float playerSide = transform.InverseTransformPoint(playerPosition).y;
         if (Mathf.Approximately(playerSide, 0f))
-            playerSide = transform.InverseTransformDirection(playerCamera.transform.forward).y;
+            playerSide = transform.InverseTransformDirection(viewDirection).y;
 
         openedAngle = playerSide >= 0f ? -openAngle : openAngle;
         isOpen = true;
     }
 
-    private static Camera FindPlayerCamera()
-    {
-        if (Camera.main != null)
-            return Camera.main;
-
-        foreach (Camera camera in FindObjectsByType<Camera>(FindObjectsSortMode.None))
-            if (camera.isActiveAndEnabled && camera.cameraType == CameraType.Game && camera.targetTexture == null)
-                return camera;
-
-        return null;
-    }
 }

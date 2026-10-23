@@ -102,7 +102,7 @@ public static class GrassGpuOptimizationSetup
   foreach(var pair in terrainHashes){if(Hash(pair.Key)!=pair.Value)throw new Exception("TerrainData changed: "+pair.Key);report.AppendLine("TerrainData byte-identical: "+pair.Key+" "+pair.Value);}
   if(Capture<Transform>(c)!=transformsBefore||Capture<Collider>(c)!=physicsBefore||Glass(c)!=glassBefore)throw new Exception("Protected transforms, colliders or glass serialization changed");
   report.AppendLine("PASS transforms/colliders/glass unchanged; tree profile retained. Native occlusion bytes="+new FileInfo(path).Length);
-  c.occlusionReady=true;foreach(var camera in SceneObjects<Camera>(c).Where(camera=>camera.targetTexture==null)){camera.useOcclusionCulling=true;EditorUtility.SetDirty(camera);}
+  c.occlusionReady=true;foreach(var camera in SceneObjects<Camera>(c).Where(camera=>camera.targetTexture==null)){camera.useOcclusionCulling=camera.GetComponent<DistantMountainBackdrop>()==null;EditorUtility.SetDirty(camera);}
   EditorUtility.SetDirty(c);AssetDatabase.SaveAssets();EditorSceneManager.MarkSceneDirty(c.gameObject.scene);EditorSceneManager.SaveScene(c.gameObject.scene);
   File.WriteAllText(Backup+"/Integrity.txt",report.ToString());
   File.WriteAllText(Backup+"/Installed.txt","PASS open scene saved. GPU far grass enabled, near25-35m retained, density1 at25m /0.5 at55m /0.5 at78m /fade78-90m. Fresh static occlusion bake verified. No FPS benchmark, computer use, build or push.\n");

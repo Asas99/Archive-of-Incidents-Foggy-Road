@@ -11,15 +11,11 @@ public class PickupDrop : MonoBehaviour
     [SerializeField] private Transform holdPoint;
 
     [Header("Pickup")]
-    [SerializeField, Min(0.1f)] private float pickupRange = 3f;
     [SerializeField] private LayerMask pickupLayers = ~0;
-    [SerializeField] private KeyCode interactKey = KeyCode.E;
-    [SerializeField] private bool useMouseCursor = true;
 
     [Header("Holding")]
     [SerializeField, Min(0.1f)] private float holdDistance = 2f;
     [SerializeField, Min(0.1f)] private float followSpeed = 14f;
-    [SerializeField] private KeyCode throwKey = KeyCode.Mouse0;
     [SerializeField, Min(0f)] private float throwForce = 8f;
     [SerializeField] private bool showDebugText = true;
 
@@ -27,7 +23,7 @@ public class PickupDrop : MonoBehaviour
     private Transform originalParent;
     private bool originalUseGravity;
     private bool originalIsKinematic;
-    private string status = "Aim at an object and press E.";
+    private string status = "Ortadaki noktayla nesneye bak ve E tuşuna bas.";
 
     private void Awake()
     {
@@ -35,63 +31,44 @@ public class PickupDrop : MonoBehaviour
             playerCamera = Camera.main;
     }
 
-    private void Update()
+    public bool IsHolding => heldBody != null;
+
+    private void LateUpdate()
     {
-        if (heldBody == null)
-        {
-            UpdateTargetStatus();
-
-            if (Input.GetKeyDown(interactKey))
-                TryPickup();
-
-            return;
-        }
-
-        MoveHeldObject();
-
-        if (Input.GetKeyDown(throwKey))
-            Release(throwForce);
-        else if (Input.GetKeyDown(interactKey))
-            Release(0f);
+        if (heldBody != null) MoveHeldObject();
     }
 
-    private void TryPickup()
+    public bool CanPickup(RaycastHit hit)
     {
-        if (playerCamera == null)
-        {
-            status = "PickupDrop: Assign Player Camera in the Inspector.";
-            return;
-        }
+        if (hit.collider == null || heldBody != null || playerCamera == null) return false;
+        if ((pickupLayers.value & (1 << hit.collider.gameObject.layer)) == 0) return false;
+        Rigidbody body = hit.rigidbody;
+        return body != null && body.GetComponentInParent<CarController>() == null &&
+               hit.collider.GetComponentInParent<TwoSidedDoor>() == null &&
+               GeneratorManager.FindForTarget(hit.transform) == null &&
+               body.GetComponentInParent<CharacterController>() == null;
+    }
 
-        Ray ray = GetPickupRay();
-        if (!Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayers, QueryTriggerInteraction.Ignore))
-        {
-            status = "No object in range at the centre of the camera.";
-            return;
-        }
-
-        Rigidbody body = hit.rigidbody != null
-            ? hit.rigidbody
-            : hit.collider.GetComponentInParent<Rigidbody>();
-        print(hit.rigidbody.transform.gameObject.name);
-        if (body == null)
-        {
-            status = $"{hit.collider.name} has no Rigidbody.";
-            return;
-        }
-
+    public bool TryPickup(RaycastHit hit)
+    {
+        if (!CanPickup(hit)) return false;
+        Rigidbody body = hit.rigidbody;
         heldBody = body;
         originalParent = heldBody.transform.parent;
         originalUseGravity = heldBody.useGravity;
         originalIsKinematic = heldBody.isKinematic;
 
-        heldBody.linearVelocity = Vector3.zero;
-        heldBody.angularVelocity = Vector3.zero;
+        if (!heldBody.isKinematic)
+        {
+            heldBody.linearVelocity = Vector3.zero;
+            heldBody.angularVelocity = Vector3.zero;
+        }
         heldBody.useGravity = false;
         heldBody.isKinematic = true;
         heldBody.transform.SetParent(holdPoint != null ? holdPoint : playerCamera.transform, true);
         MoveHeldObject(true);
-        status = $"Holding {body.name}. E drops; left mouse throws.";
+        status = $"{body.name} elde. E - Bırak | Sol tık - Fırlat";
+        return true;
     }
 
     private void MoveHeldObject(bool snap = false)
@@ -102,6 +79,11 @@ public class PickupDrop : MonoBehaviour
         heldBody.transform.position = snap
             ? targetPosition
             : Vector3.Lerp(heldBody.transform.position, targetPosition, followSpeed * Time.deltaTime);
+    }
+
+    public void ReleaseHeld(bool throwObject)
+    {
+        Release(throwObject ? throwForce : 0f);
     }
 
     private void Release(float force)
@@ -116,47 +98,20 @@ public class PickupDrop : MonoBehaviour
         body.isKinematic = originalIsKinematic;
         body.useGravity = originalUseGravity;
 
-        if (force > 0f && playerCamera != null)
+        if (force > 0f && playerCamera != null && !body.isKinematic)
             body.AddForce(playerCamera.transform.forward * force, ForceMode.Impulse);
 
-        status = $"Dropped {body.name}.";
+        status = $"{body.name} bırakıldı.";
     }
 
-    private void UpdateTargetStatus()
+    public void SetTargetStatus(string text)
     {
-        if (playerCamera == null)
-        {
-            status = "PickupDrop: Assign Player Camera in the Inspector.";
-            return;
-        }
-
-        Ray ray = GetPickupRay();
-        if (!Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayers, QueryTriggerInteraction.Ignore))
-        {
-            status = useMouseCursor
-                ? "Move the mouse cursor over an object."
-                : "Aim the centre of the camera at an object.";
-            return;
-        }
-
-        Rigidbody body = hit.rigidbody != null
-            ? hit.rigidbody
-            : hit.collider.GetComponentInParent<Rigidbody>();
-        status = body == null
-            ? $"Aiming at {hit.collider.name}: it needs a Rigidbody."
-            : $"Aiming at {body.name}: press {interactKey} to pick up.";
-    }
-
-    private Ray GetPickupRay()
-    {
-        return useMouseCursor
-            ? playerCamera.ScreenPointToRay(Input.mousePosition)
-            : new Ray(playerCamera.transform.position, playerCamera.transform.forward);
+        if (!IsHolding) status = text;
     }
 
     private void OnGUI()
     {
-        if (!showDebugText)
+        if (!showDebugText || string.IsNullOrEmpty(status))
             return;
 
         GUI.Box(new Rect(20f, Screen.height - 58f, 520f, 38f), status);

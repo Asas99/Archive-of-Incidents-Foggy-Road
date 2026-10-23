@@ -13,15 +13,17 @@ public sealed class SceneOptimizationController : MonoBehaviour
  public bool occlusionReady;
  public Material[] nearGrassMaterials=System.Array.Empty<Material>(),smallVegetationMaterials=System.Array.Empty<Material>();
  readonly Dictionary<Camera,bool> oldCameraOcclusion=new Dictionary<Camera,bool>();
+ readonly VegetationDensityRuntime vegetationDensity=new VegetationDensityRuntime();
  int lastSignature;bool configured;
  float oldLodBias,oldShadowDistance;bool qualitySaved;
  static readonly int FadeCamera=Shader.PropertyToID("_FoggyOptimizationCamera"),FadeEnabled=Shader.PropertyToID("_FoggyOptimizationEnabled");
  void OnEnable(){if(!profile)return;oldLodBias=QualitySettings.lodBias;oldShadowDistance=QualitySettings.shadowDistance;qualitySaved=true;QualitySettings.lodBias=profile.lodBias;QualitySettings.shadowDistance=profile.shadowDistance;ApplyTerrain();RenderPipelineManager.beginCameraRendering+=Begin;}
- public void ApplyTerrain(){if(!profile)return;foreach(var t in terrains)if(t){t.detailObjectDistance=profile.grassEnd;t.treeDistance=profile.treeEnd;t.treeBillboardDistance=profile.treeBillboardDistance;t.treeCrossFadeLength=profile.treeCrossFadeLength;t.treeMaximumFullLODCount=profile.fullTrees;t.heightmapPixelError=profile.heightmapPixelError;t.drawInstanced=true;}foreach(var t in smallVegetationTerrains)if(t){t.treeDistance=profile.smallVegetationEnd;t.detailObjectDistance=0;t.detailObjectDensity=0;t.drawHeightmap=false;}SetFade(nearGrassMaterials,profile.grassStart,profile.grassEnd);SetFade(smallVegetationMaterials,profile.smallVegetationStart,profile.smallVegetationEnd);}
+ public void ApplyTerrain(){if(!profile)return;foreach(var t in terrains)if(t){t.detailObjectDistance=profile.grassEnd;t.treeDistance=profile.treeEnd;t.treeBillboardDistance=profile.treeBillboardDistance;t.treeCrossFadeLength=profile.treeCrossFadeLength;t.treeMaximumFullLODCount=profile.fullTrees;t.treeLODBiasMultiplier=profile.treeLodBias;t.heightmapPixelError=profile.heightmapPixelError;t.drawInstanced=true;}foreach(var t in smallVegetationTerrains)if(t){t.treeDistance=profile.smallVegetationEnd;t.detailObjectDistance=0;t.detailObjectDensity=0;t.drawHeightmap=false;}vegetationDensity.Apply(terrains,profile.treeDensity,profile.nativeGrassDensity);SetFade(nearGrassMaterials,profile.grassStart,profile.grassEnd);SetFade(smallVegetationMaterials,profile.smallVegetationStart,profile.smallVegetationEnd);}
  static void SetFade(Material[] materials,float start,float end){foreach(var m in materials)if(m&&m.HasProperty("Distance_Fade_Start")){m.SetFloat("Distance_Fade_Start",start);m.SetFloat("Distance_Fade_End",end);}}
  void Begin(ScriptableRenderContext context,Camera camera)
  {
   bool game=camera&&camera.cameraType==CameraType.Game&&camera.targetTexture==null&&camera.gameObject.scene==gameObject.scene;
+  if(game&&!FarGrassRenderer.ProfileIncludeMountainCameras&&camera.GetComponent<DistantMountainBackdrop>())game=false;
   Shader.SetGlobalFloat(FadeEnabled,game?1:0);if(!game||!profile)return;
   Shader.SetGlobalVector(FadeCamera,camera.transform.position);
   if(!oldCameraOcclusion.ContainsKey(camera))oldCameraOcclusion.Add(camera,camera.useOcclusionCulling);
@@ -32,6 +34,7 @@ public sealed class SceneOptimizationController : MonoBehaviour
   Shader.SetGlobalVector("_FoggyGrassRange",new Vector4(profile.grassStart,Mathf.Max(profile.grassStart+.01f,profile.grassEnd),0,0));
   float fov=camera.orthographic?-camera.orthographicSize:camera.fieldOfView;
   int signature=System.HashCode.Combine(fov,profile.smallEnd,profile.mediumEnd,profile.lodBias,profile.grassStart,profile.grassEnd,profile.treeEnd,System.HashCode.Combine(profile.smallVegetationStart,profile.smallVegetationEnd,profile.treeBillboardDistance,profile.treeCrossFadeLength));
+  signature=System.HashCode.Combine(signature,profile.treeDensity,profile.nativeGrassDensity,profile.treeLodBias,profile.fullTrees);
   if(configured&&lastSignature==signature)return;
   configured=true;lastSignature=signature;ApplyTerrain();
   for(int i=0;i<distanceGroups.Length&&i<distanceEnds.Length;i++)
@@ -44,5 +47,6 @@ public sealed class SceneOptimizationController : MonoBehaviour
    lods[0].screenRelativeTransitionHeight=threshold;g.SetLODs(lods);
   }
  }
- void OnDisable(){RenderPipelineManager.beginCameraRendering-=Begin;Shader.SetGlobalFloat(FadeEnabled,0);configured=false;foreach(var pair in oldCameraOcclusion)if(pair.Key)pair.Key.useOcclusionCulling=pair.Value;oldCameraOcclusion.Clear();if(qualitySaved){QualitySettings.lodBias=oldLodBias;QualitySettings.shadowDistance=oldShadowDistance;qualitySaved=false;}}
+ public void ResetVegetationDensity(){vegetationDensity.Dispose();}
+ void OnDisable(){vegetationDensity.Dispose();RenderPipelineManager.beginCameraRendering-=Begin;Shader.SetGlobalFloat(FadeEnabled,0);configured=false;foreach(var pair in oldCameraOcclusion)if(pair.Key)pair.Key.useOcclusionCulling=pair.Value;oldCameraOcclusion.Clear();if(qualitySaved){QualitySettings.lodBias=oldLodBias;QualitySettings.shadowDistance=oldShadowDistance;qualitySaved=false;}}
 }

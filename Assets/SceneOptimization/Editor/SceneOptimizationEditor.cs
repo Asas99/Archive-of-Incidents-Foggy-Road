@@ -210,7 +210,7 @@ public static class SceneOptimizationEditor
   manager.smallDistanceGroups=manager.distanceEnds.Select(end=>Mathf.Approximately(end,80)).ToArray();
   VegetationRangeInstaller.ConfigureMaterials(manager);
   manager.ApplyTerrain();File.WriteAllText(Backup+"/Finalization.txt",report.ToString());
-  manager.occlusionReady=true;foreach(var c in Object.FindObjectsByType<Camera>(FindObjectsInactive.Include,FindObjectsSortMode.None).Where(c=>c.gameObject.scene==manager.gameObject.scene&&c.targetTexture==null)){c.useOcclusionCulling=true;SaveObject(c);}
+  manager.occlusionReady=true;foreach(var c in Object.FindObjectsByType<Camera>(FindObjectsInactive.Include,FindObjectsSortMode.None).Where(c=>c.gameObject.scene==manager.gameObject.scene&&c.targetTexture==null)){c.useOcclusionCulling=c.GetComponent<DistantMountainBackdrop>()==null;SaveObject(c);}
   SaveObject(manager);AssetDatabase.SaveAssets();EditorSceneManager.MarkSceneDirty(manager.gameObject.scene);EditorSceneManager.SaveScene(manager.gameObject.scene);
   File.WriteAllText(Backup+"/Installed.txt","PASS Scene saved; fresh occlusion file bytes="+new FileInfo(dataPath).Length+"; no FPS benchmark or push.\n");
  }

@@ -14,4 +14,7 @@ public sealed class SceneOptimizationProfile : ScriptableObject
  public float smallVegetationStart=80,smallVegetationEnd=100,treeBillboardDistance=200,treeCrossFadeLength=40;
  public float lodBias=1.2f,shadowDistance=70,heightmapPixelError=4;
  public int shadowAtlas=2048,shadowCascades=2,fullTrees=400;
+ // Density operates on temporary runtime TerrainData; painted source assets remain intact.
+ [Range(0,1)] public float treeDensity=1,nativeGrassDensity=1;
+ [Range(.1f,3)] public float treeLodBias=1;
 }

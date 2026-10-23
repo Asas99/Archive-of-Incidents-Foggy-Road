@@ -1,24 +1,35 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>Controls the generator with its physical switch lever.</summary>
 [DisallowMultipleComponent]
 public sealed class GeneratorManager : MonoBehaviour
 {
+    private static readonly HashSet<GeneratorManager> activeGenerators = new HashSet<GeneratorManager>();
     [Header("Generator Controls")]
     [SerializeField] private Transform lever;
     [SerializeField] private Light greenSpotlight;
     [SerializeField] private Light redSpotlight;
 
     [Header("Interaction")]
-    [SerializeField, Min(0.1f)] private float interactionRange = 3f;
-    [SerializeField] private KeyCode interactKey = KeyCode.E;
     [SerializeField] private bool allowLeftClick = true;
     [SerializeField, Min(1f)] private float degreesPerSecond = 180f;
 
-    private Camera playerCamera;
+    public bool AllowLeftClick => allowLeftClick;
     private Quaternion leverDownRotation;
     private Quaternion leverUpRotation;
     public bool isOn;
+
+    private void OnEnable() { activeGenerators.Add(this); }
+    private void OnDisable() { activeGenerators.Remove(this); }
+
+    // The scene's switch lever is a separate root object, not a child of this manager.
+    public static GeneratorManager FindForTarget(Transform target)
+    {
+        foreach (GeneratorManager generator in activeGenerators)
+            if (generator != null && generator.IsLever(target)) return generator;
+        return target.GetComponentInParent<GeneratorManager>();
+    }
 
     private void Awake()
     {
@@ -30,18 +41,11 @@ public sealed class GeneratorManager : MonoBehaviour
             leverUpRotation = leverDownRotation * Quaternion.AngleAxis(-90f, Vector3.up);
         }
 
-        playerCamera = FindPlayerCamera();
         SetGeneratorState(false);
     }
 
     private void Update()
     {
-        if (playerCamera == null)
-            playerCamera = FindPlayerCamera();
-
-        if (playerCamera != null && WantsToInteract() && IsAimingAtLever())
-            SetGeneratorState(!isOn);
-
         if (lever != null)
         {
             Quaternion target = isOn ? leverUpRotation : leverDownRotation;
@@ -50,27 +54,14 @@ public sealed class GeneratorManager : MonoBehaviour
         }
     }
 
-    private bool WantsToInteract()
+    public bool IsLever(Transform target)
     {
-        return Input.GetKeyDown(interactKey) ||
-               (allowLeftClick && Input.GetMouseButtonDown(0));
+        return lever != null && (target == lever || target.IsChildOf(lever));
     }
 
-    private bool IsAimingAtLever()
+    public void Interact()
     {
-        bool cursorIsFree = Cursor.lockState == CursorLockMode.None &&
-                            Input.mousePosition.x >= 0f && Input.mousePosition.x <= Screen.width &&
-                            Input.mousePosition.y >= 0f && Input.mousePosition.y <= Screen.height;
-        Vector3 point = cursorIsFree
-            ? Input.mousePosition
-            : new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
-
-        Ray ray = playerCamera.ScreenPointToRay(point);
-        if (!Physics.Raycast(ray, out RaycastHit hit, interactionRange,
-                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
-            return false;
-
-        return lever != null && (hit.transform == lever || hit.transform.IsChildOf(lever));
+        SetGeneratorState(!isOn);
     }
 
     private void SetGeneratorState(bool turnOn)
@@ -82,15 +73,4 @@ public sealed class GeneratorManager : MonoBehaviour
             redSpotlight.enabled = !isOn;
     }
 
-    private static Camera FindPlayerCamera()
-    {
-        if (Camera.main != null)
-            return Camera.main;
-
-        foreach (Camera camera in FindObjectsByType<Camera>(FindObjectsSortMode.None))
-            if (camera.isActiveAndEnabled && camera.cameraType == CameraType.Game && camera.targetTexture == null)
-                return camera;
-
-        return null;
-    }
 }

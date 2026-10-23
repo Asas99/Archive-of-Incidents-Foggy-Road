@@ -5,6 +5,7 @@ using UnityEngine.Rendering;
 [DisallowMultipleComponent]
 public sealed partial class FarGrassRenderer : MonoBehaviour
 {
+ internal static bool ProfileIncludeMountainCameras;
  public SceneOptimizationProfile profile;
  public FarGrassCache[] caches=System.Array.Empty<FarGrassCache>();
  public int candidatePatches,visibleInstances,drawCalls,triangles;
@@ -26,6 +27,7 @@ public sealed partial class FarGrassRenderer : MonoBehaviour
  public bool Accepts(Camera camera)
  {
   if(!profile||!camera||camera.gameObject.scene!=gameObject.scene)return false;
+  if(!ProfileIncludeMountainCameras&&camera.GetComponent<DistantMountainBackdrop>())return false;
 #if UNITY_EDITOR
   if(camera==validationCamera)return true;
 #endif

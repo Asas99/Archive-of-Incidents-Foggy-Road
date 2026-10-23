@@ -12,15 +12,8 @@ public sealed class FoggyRoadBlenderCarImporter : AssetPostprocessor
 
     private static readonly HashSet<string> PendingManifests = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-    static FoggyRoadBlenderCarImporter()
-    {
-        EditorApplication.delayCall += () =>
-        {
-            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-            ImportAllBlenderCars();
-        };
-    }
-
+    // Import changed manifests through OnPostprocessAllAssets. Reimporting every
+    // Blender car at every domain reload makes opening the project and compiling slow.
     private static void OnPostprocessAllAssets(
         string[] importedAssets,
         string[] deletedAssets,

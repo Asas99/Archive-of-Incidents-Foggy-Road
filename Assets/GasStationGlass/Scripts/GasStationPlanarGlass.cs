@@ -90,7 +90,8 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
     static bool IsScreenCamera(Camera camera)
     {
         if(!camera || !camera.enabled || !camera.gameObject.activeInHierarchy || camera.cameraType!=CameraType.Game || camera.targetTexture || camera.targetDisplay!=0) return false;
-        return !camera.TryGetComponent<UniversalAdditionalCameraData>(out var data) || data.renderType==CameraRenderType.Base;
+        if(camera.GetComponent<DistantMountainBackdrop>()) return false;
+        return camera.GetComponent<PlayerInteraction>() || !camera.TryGetComponent<UniversalAdditionalCameraData>(out var data) || data.renderType==CameraRenderType.Base;
     }
 
     void OnEnable()
