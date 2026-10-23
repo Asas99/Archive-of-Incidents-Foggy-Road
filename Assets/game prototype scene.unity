@@ -20335,16 +20335,6 @@ MonoBehaviour:
     - {fileID: 1699188765}
     bakedPositive: {fileID: 342494026}
     bakedNegative: {fileID: 102545932}
-  - name: Moving 7
-    arrivalBurstOnly: 0
-    arrivalBurstSeconds: 2
-    plane: {fileID: 1323013644}
-    localPoint: {x: 0, y: 0, z: 0}
-    localNormal: {x: 0, y: 1, z: 0}
-    windows:
-    - {fileID: 1323013642}
-    bakedPositive: {fileID: 342494026}
-    bakedNegative: {fileID: 102545932}
   - name: Facade 8
     arrivalBurstOnly: 1
     arrivalBurstSeconds: 2
@@ -20365,6 +20355,16 @@ MonoBehaviour:
     - {fileID: 907094156}
     bakedPositive: {fileID: 0}
     bakedNegative: {fileID: 0}
+  - name: Moving 9
+    arrivalBurstOnly: 0
+    arrivalBurstSeconds: 2
+    plane: {fileID: 1323013644}
+    localPoint: {x: 0, y: 0, z: 0}
+    localNormal: {x: 0, y: 1, z: 0}
+    windows:
+    - {fileID: 1323013642}
+    bakedPositive: {fileID: 342494026}
+    bakedNegative: {fileID: 102545932}
   reflectionRendererIndex: 1
   configuredPipeline: {fileID: 11400000, guid: 4b83569d67af61e458304325a23e5dfd, type: 2}
   reflectionLayers:
@@ -25063,15 +25063,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 07372c944b041294e8d9e7ec19be2b36, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -1.6068617
+      value: -1.61
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 07372c944b041294e8d9e7ec19be2b36, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.00039593875
+      value: 0.49
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 07372c944b041294e8d9e7ec19be2b36, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.0015029907
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 07372c944b041294e8d9e7ec19be2b36, type: 3}
       propertyPath: m_LocalRotation.w
@@ -35631,7 +35631,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: cfca1a5a0b75a634b843744d37c9d388, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.003
+      value: -0.003
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: cfca1a5a0b75a634b843744d37c9d388, type: 3}
       propertyPath: m_LocalPosition.y
@@ -46576,7 +46576,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: cfca1a5a0b75a634b843744d37c9d388, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.003
+      value: -0.003
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: cfca1a5a0b75a634b843744d37c9d388, type: 3}
       propertyPath: m_LocalPosition.y
