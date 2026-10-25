@@ -12,7 +12,8 @@ public sealed partial class FarGrassRenderer
  {
   public FarGrassCache cache;public FarGrassCache.Patch[] source;public Material material;
   public ComputeBuffer instances,visible,args,ranges,counters;public Range[] candidates,all;public int count,candidateInstances;
-  public Mesh mesh;public Material original;public float windPadding,windSignature;
+  public Mesh mesh;public Material original;public float windPadding,windSignature;public int forwardPass;
+  public VegetationPatchHierarchy hierarchy;public int[] acceptedPatches;
   public void Dispose(){instances?.Release();visible?.Release();args?.Release();ranges?.Release();counters?.Release();if(material){if(Application.isPlaying)UnityEngine.Object.Destroy(material);else UnityEngine.Object.DestroyImmediate(material);}}
  }
  readonly Dictionary<FarGrassCache,GpuCache> gpuCaches=new Dictionary<FarGrassCache,GpuCache>();
@@ -24,6 +25,7 @@ public sealed partial class FarGrassRenderer
  public string gpuStatus {get;private set;}="CPU — henüz çizilmedi";
  public bool gpuCountersValid {get;private set;}
  public int gpuVisible,gpuOccluded,gpuRangeRejected,gpuFrustumRejected,gpuDensityRejected;
+ public int gpuPatchTests,gpuHierarchyTests;
  bool readGpuCounters,counterFailed;int counterVersion,pendingCounters;
  public void RequestGpuCounters(){readGpuCounters=true;gpuCountersValid=false;}
  public bool CanUseGpu(Camera camera,ComputeShader compute,Shader shader,int msaa)
@@ -50,7 +52,8 @@ public sealed partial class FarGrassRenderer
    var patch=cache.patches[p];all[p]=new Range{start=(uint)offset,count=(uint)patch.matrices.Length};
    for(int i=0;i<patch.matrices.Length;i++) {var m=patch.matrices[i];var c=patch.centers[i];float extra=2*wind*Mathf.Max(m.GetColumn(0).magnitude,m.GetColumn(1).magnitude,m.GetColumn(2).magnitude);padding=Mathf.Max(padding,extra);data[offset++]=new Instance{matrix=m,inverseMatrix=m.inverse,bounds=new Vector4(c.x,c.y,c.z,patch.radii[i]+extra)};}
   }
-  var result=new GpuCache{cache=cache,source=cache.patches,mesh=cache.mesh,original=cache.material,all=all,candidates=new Range[all.Length],windPadding=padding,windSignature=wind};
+  var result=new GpuCache{cache=cache,source=cache.patches,mesh=cache.mesh,original=cache.material,all=all,candidates=new Range[all.Length],windPadding=padding,windSignature=wind,
+   hierarchy=new VegetationPatchHierarchy(cache.patches),acceptedPatches=new int[all.Length]};
   try
   {
    result.instances=new ComputeBuffer(n,144);result.instances.SetData(data);
@@ -58,6 +61,7 @@ public sealed partial class FarGrassRenderer
    result.args.SetData(new uint[]{cache.mesh.GetIndexCount(0),0,cache.mesh.GetIndexStart(0),(uint)cache.mesh.GetBaseVertex(0),0});
    result.ranges=new ComputeBuffer(Mathf.Max(1,all.Length),8);result.counters=new ComputeBuffer(5,4);
    result.material=new Material(cache.material){shader=shader,enableInstancing=true,hideFlags=HideFlags.HideAndDontSave};
+   result.forwardPass=result.material.FindPass("Universal Forward");
    gpuCaches.Add(cache,result);return result;
   }
   catch {result.Dispose();throw;}
@@ -65,6 +69,7 @@ public sealed partial class FarGrassRenderer
  public void PrepareGpu(Camera camera,Shader shader)
  {
   gpuDraws.Clear();candidatePatches=visibleInstances=drawCalls=triangles=0;totalInstances=testedInstances=rangeRejected=frustumRejected=densityRejected=0;
+  gpuPatchTests=gpuHierarchyTests=0;
   GeometryUtility.CalculateFrustumPlanes(camera,planes);for(int i=0;i<6;i++)gpuPlanes[i]=new Vector4(planes[i].normal.x,planes[i].normal.y,planes[i].normal.z,planes[i].distance);
   if(profile.farGrassDensity<=0)return;
   staleGpuCaches.Clear();foreach(var pair in gpuCaches)if(Array.IndexOf(caches,pair.Key)<0)staleGpuCaches.Add(pair.Key);
@@ -74,12 +79,13 @@ public sealed partial class FarGrassRenderer
   {
    if(!cache||!cache.mesh||!cache.material)continue;
    var gpu=GetGpu(cache,shader);if(gpu==null)continue;gpu.count=0;gpu.candidateInstances=0;
-   for(int p=0;p<cache.patches.Length;p++)
+   totalInstances+=gpu.hierarchy.InstanceCount;
+   int accepted=gpu.hierarchy.Query(planes,eye,far2,gpu.windPadding,gpu.acceptedPatches,out var stats);
+   gpuPatchTests+=stats.patchTests;gpuHierarchyTests+=stats.nodeTests;
+   rangeRejected+=stats.rangeRejected;frustumRejected+=stats.frustumRejected;
+   for(int a=0;a<accepted;a++)
    {
-    var patch=cache.patches[p];totalInstances+=patch.matrices.Length;
-    var expanded=patch.bounds;expanded.Expand(gpu.windPadding*2);
-    if(expanded.SqrDistance(eye)>far2){rangeRejected+=patch.matrices.Length;continue;}
-    if(!GeometryUtility.TestPlanesAABB(planes,expanded)){frustumRejected+=patch.matrices.Length;continue;}
+    int p=gpu.acceptedPatches[a];var patch=cache.patches[p];
     gpu.candidates[gpu.count++]=gpu.all[p];gpu.candidateInstances+=patch.matrices.Length;candidatePatches++;testedInstances+=patch.matrices.Length;
    }
    if(gpu.count>0){gpu.ranges.SetData(gpu.candidates,0,0,gpu.count);gpuDraws.Add(gpu);}
@@ -98,17 +104,20 @@ public sealed partial class FarGrassRenderer
   cmd.SetComputeVectorParam(compute,"_GrassRange",range);cmd.SetComputeVectorParam(compute,"_DensityDistances",distances);cmd.SetComputeVectorParam(compute,"_DensityValues",values);
   cmd.SetComputeIntParam(compute,"_ReversedZ",SystemInfo.usesReversedZBuffer?1:0);cmd.SetComputeTextureParam(compute,kernel,"_PyramidRead",depth.pyramid);
   bool read=readGpuCounters&&SystemInfo.supportsAsyncGPUReadback;int version=counterVersion;
+  // Telemetry never decides which plants are drawn. Avoid an extra atomic for
+  // every visible/rejected instance during normal gameplay; keep it on demand.
+  cmd.SetComputeIntParam(compute,"_CollectCounters",read?1:0);
   if(read){readGpuCounters=false;counterFailed=false;version=++counterVersion;pendingCounters=gpuDraws.Count;gpuVisible=gpuOccluded=gpuRangeRejected=gpuFrustumRejected=gpuDensityRejected=0;}
   foreach(var gpu in gpuDraws)
   {
-   cmd.SetBufferCounterValue(gpu.visible,0);cmd.SetBufferData(gpu.counters,zeroCounters);
+   cmd.SetBufferCounterValue(gpu.visible,0);if(read)cmd.SetBufferData(gpu.counters,zeroCounters);
    cmd.SetComputeIntParam(compute,"_PatchCount",gpu.count);cmd.SetComputeBufferParam(compute,kernel,"_GrassInstances",gpu.instances);
    cmd.SetComputeBufferParam(compute,kernel,"_PatchRanges",gpu.ranges);cmd.SetComputeBufferParam(compute,kernel,"_VisibleGrass",gpu.visible);cmd.SetComputeBufferParam(compute,kernel,"_Counters",gpu.counters);
    cmd.DispatchCompute(compute,kernel,gpu.count,1,1);cmd.CopyCounterValue(gpu.visible,gpu.args,4);
    if(properties==null)properties=new MaterialPropertyBlock();properties.Clear();
    properties.SetVector("_FoggyFarGrassRange",range);properties.SetVector("_FoggyDensityDistances",distances);properties.SetVector("_FoggyDensityValues",values);
    properties.SetBuffer("_GrassInstances",gpu.instances);properties.SetBuffer("_VisibleGrass",gpu.visible);
-   cmd.DrawMeshInstancedIndirect(gpu.mesh,0,gpu.material,gpu.material.FindPass("Universal Forward"),gpu.args,0,properties);
+   cmd.DrawMeshInstancedIndirect(gpu.mesh,0,gpu.material,gpu.forwardPass,gpu.args,0,properties);
    if(read)
    {
     int captured=version,candidateCount=gpu.candidateInstances;

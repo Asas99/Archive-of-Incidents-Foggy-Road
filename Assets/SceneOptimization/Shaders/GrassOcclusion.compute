@@ -42,6 +42,7 @@ float4 _Planes[6];
 float4 _Eye, _DensityDistances, _DensityValues, _GrassRange;
 float4 _Viewport; // real depth width,height,pyramid width,height
 int _PatchCount, _MipCount;
+int _CollectCounters;
 float _NearClip;
 
 float DensityCoverage(float3 origin,float d)
@@ -102,12 +103,12 @@ void Cull(uint3 group : SV_GroupID,uint thread : SV_GroupIndex)
   uint index=range.x+i;GrassInstance item=_GrassInstances[index];
   float3 origin=float3(item.objectToWorld[0][3],item.objectToWorld[1][3],item.objectToWorld[2][3]);
   float d=distance(origin,_Eye.xyz);
-  if(d>=_GrassRange.w || (_GrassRange.x>0 && d<=_GrassRange.x)){InterlockedAdd(_Counters[2],1);continue;}
+  if(d>=_GrassRange.w || (_GrassRange.x>0 && d<=_GrassRange.x)){if(_CollectCounters!=0)InterlockedAdd(_Counters[2],1);continue;}
   bool inside=true;
   [unroll] for(int p=0;p<6;p++) if(dot(_Planes[p].xyz,item.bounds.xyz)+_Planes[p].w < -item.bounds.w)inside=false;
   if(!inside)continue;
-  if(DensityCoverage(origin,d)<=0){InterlockedAdd(_Counters[4],1);continue;}
-  if(Occluded(item.bounds.xyz,item.bounds.w)){InterlockedAdd(_Counters[1],1);continue;}
-  _VisibleGrass.Append(index);InterlockedAdd(_Counters[0],1);
+  if(DensityCoverage(origin,d)<=0){if(_CollectCounters!=0)InterlockedAdd(_Counters[4],1);continue;}
+  if(Occluded(item.bounds.xyz,item.bounds.w)){if(_CollectCounters!=0)InterlockedAdd(_Counters[1],1);continue;}
+  _VisibleGrass.Append(index);if(_CollectCounters!=0)InterlockedAdd(_Counters[0],1);
  }
 }

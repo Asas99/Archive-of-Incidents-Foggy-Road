@@ -263,6 +263,13 @@ Varyings BuildVaryings(Attributes input
 #include "Assets/SceneOptimization/Shaders/GrassDistance.hlsl"
 SurfaceDescription BuildSurfaceDescription(Varyings varyings)
 {
+    // Use the SAME coverage/noise test before texture sampling and surface work.
+    // Discarded pixels contributed nothing before; surviving pixels still run
+    // the original surface graph, lighting and alpha test without modification.
+    // Validation can compile a temporary shader with the previous call order.
+#if !defined(HAVE_VFX_MODIFICATION) && (SHADERPASS != SHADERPASS_META) && !defined(FOGGY_VALIDATE_LATE_CLIP)
+    FoggyDistanceClip(varyings.positionCS.xy);
+#endif
     SurfaceDescriptionInputs surfaceDescriptionInputs = BuildSurfaceDescriptionInputs(varyings);
 #if defined(HAVE_VFX_MODIFICATION)
     GraphProperties properties;
@@ -271,7 +278,7 @@ SurfaceDescription BuildSurfaceDescription(Varyings varyings)
     SurfaceDescription surfaceDescription = SurfaceDescriptionFunction(surfaceDescriptionInputs, properties);
 #else
     SurfaceDescription surfaceDescription = SurfaceDescriptionFunction(surfaceDescriptionInputs);
-#if (SHADERPASS != SHADERPASS_META)
+#if (SHADERPASS != SHADERPASS_META) && defined(FOGGY_VALIDATE_LATE_CLIP)
     FoggyDistanceClip(varyings.positionCS.xy);
 #endif
 #endif

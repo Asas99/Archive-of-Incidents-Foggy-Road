@@ -6,7 +6,8 @@
 // bu bilesen kendi basina tepki verir. Ikisi ayni sinifta olsaydi her rebuild
 // kullanicinin elle yaptiklarini silerdi.
 //
-// Kablo temsili: prosedurel tup mesh, hepsi TEK mesh'te.
+// Kablo temsili: prosedurel tup mesh. Istenirse birkac direklik bolumler
+// ayri renderer kullanir; boylece kilometrelerce hat tek bounds ile cizilmez.
 // LineRenderer kullanilmadi cunku:
 //   - 80 direk x 2 kablo = 158 ayri renderer, batch yok. Sahne zaten FPS/pop-in
 //     sorunu yasamis (bkz. FoggyRoad_PopInTamDuzeltme.cs).
@@ -52,6 +53,10 @@ public class FoggyRoad_PowerLine : MonoBehaviour
     [Tooltip("Kablo materyali. Bos birakilirsa Inspector'daki butonla uretilebilir.")]
     public Material wireMaterial;
 
+    [Header("Cizim optimizasyonu")]
+    public bool partitionRendering;
+    [Min(1)] public int spansPerChunk = 4;
+
     // ------------------------------------------------------------ sarkma
     [Header("Sarkma")]
     [Range(0.002f, 0.12f)]
@@ -91,6 +96,10 @@ public class FoggyRoad_PowerLine : MonoBehaviour
     [System.NonSerialized] Mesh mesh;
     [System.NonSerialized] MeshFilter mf;
     [System.NonSerialized] MeshRenderer mr;
+    readonly List<GameObject> renderChunks = new List<GameObject>();
+    readonly List<Mesh> chunkMeshes = new List<Mesh>();
+    readonly List<Vector2Int> chunkRanges = new List<Vector2Int>();
+    bool originalForceRenderingOff;
 
     // Son bilinen direk pozisyon/rotasyonlari. transform.hasChanged KULLANILMIYOR:
     // baska bir script de onu kullaniyor olabilir, false'a cekmek onu bozar.
@@ -111,6 +120,7 @@ public class FoggyRoad_PowerLine : MonoBehaviour
     void OnEnable()
     {
         EnsureComponents();
+        originalForceRenderingOff = mr != null && mr.forceRenderingOff;
         Rebuild();
     }
 
@@ -124,6 +134,8 @@ public class FoggyRoad_PowerLine : MonoBehaviour
 
     void OnDisable()
     {
+        ClearChunks();
+        if (mr != null) mr.forceRenderingOff = originalForceRenderingOff;
         if (mf != null) mf.sharedMesh = null;
         DestroyMesh();
     }
@@ -167,6 +179,9 @@ public class FoggyRoad_PowerLine : MonoBehaviour
         CacheTransforms();
 
         vBuf.Clear(); nBuf.Clear(); uvBuf.Clear(); tBuf.Clear();
+        chunkRanges.Clear();
+        int chunkVertexStart = 0;
+        int chunkTriangleStart = 0;
 
         for (int i = 0; i + 1 < poles.Count; i++)
         {
@@ -183,7 +198,19 @@ public class FoggyRoad_PowerLine : MonoBehaviour
             int n = Mathf.Min(anchorsA.Count, anchorsB.Count);
             for (int w = 0; w < n; w++)
                 AppendSpan(anchorsA[w], anchorsB[w]);
+
+            if ((i + 1) % Mathf.Max(1, spansPerChunk) == 0 || i + 2 == poles.Count)
+            {
+                chunkRanges.Add(new Vector2Int(chunkVertexStart, chunkTriangleStart));
+                chunkVertexStart = vBuf.Count;
+                chunkTriangleStart = tBuf.Count;
+            }
         }
+
+        // A trailing span may have no usable anchors. Retain any geometry
+        // accumulated before that span even when the final loop was skipped.
+        if (chunkTriangleStart < tBuf.Count)
+            chunkRanges.Add(new Vector2Int(chunkVertexStart, chunkTriangleStart));
 
         if (mesh == null)
         {
@@ -208,6 +235,71 @@ public class FoggyRoad_PowerLine : MonoBehaviour
         }
 
         mf.sharedMesh = mesh;
+        RebuildChunks();
+    }
+
+    void ClearChunks()
+    {
+        foreach (GameObject chunk in renderChunks)
+            if (chunk) { if (Application.isPlaying) Destroy(chunk); else DestroyImmediate(chunk); }
+        foreach (Mesh chunk in chunkMeshes)
+            if (chunk) { if (Application.isPlaying) Destroy(chunk); else DestroyImmediate(chunk); }
+        renderChunks.Clear();
+        chunkMeshes.Clear();
+    }
+
+    void RebuildChunks()
+    {
+        ClearChunks();
+        mr.forceRenderingOff = originalForceRenderingOff;
+        if (!partitionRendering || vBuf.Count == 0) return;
+
+        Transform lightingAnchor = mr.probeAnchor;
+        if (!lightingAnchor)
+        {
+            GameObject anchor = new GameObject("PowerLine_ProbeAnchor") { hideFlags = HideFlags.HideAndDontSave };
+            anchor.transform.SetParent(transform, false);
+            anchor.transform.position = mr.bounds.center;
+            lightingAnchor = anchor.transform;
+            renderChunks.Add(anchor);
+        }
+
+        // Keep the existing full mesh for editor tools/geometry validation. Only
+        // its drawing is replaced. Each tube's vertex, normal, UV and triangle
+        // order is copied verbatim, with indices rebased for the smaller mesh.
+        for (int c = 0; c < chunkRanges.Count; c++)
+        {
+            int firstV = chunkRanges[c].x, firstT = chunkRanges[c].y;
+            int endV = c + 1 < chunkRanges.Count ? chunkRanges[c + 1].x : vBuf.Count;
+            int endT = c + 1 < chunkRanges.Count ? chunkRanges[c + 1].y : tBuf.Count;
+            if (endT == firstT) continue;
+            Mesh part = new Mesh { name = "PowerLine_Chunk_" + c, hideFlags = HideFlags.DontSave };
+            part.indexFormat = endV - firstV > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
+            part.SetVertices(vBuf.GetRange(firstV, endV - firstV));
+            part.SetNormals(nBuf.GetRange(firstV, endV - firstV));
+            part.SetUVs(0, uvBuf.GetRange(firstV, endV - firstV));
+            int[] indices = new int[endT - firstT];
+            for (int t = firstT; t < endT; t++) indices[t - firstT] = tBuf[t] - firstV;
+            part.SetTriangles(indices, 0, true);
+            chunkMeshes.Add(part);
+
+            GameObject child = new GameObject(part.name) { hideFlags = HideFlags.HideAndDontSave, layer = gameObject.layer };
+            child.transform.SetParent(transform, false);
+            child.AddComponent<MeshFilter>().sharedMesh = part;
+            MeshRenderer renderer = child.AddComponent<MeshRenderer>();
+            renderer.sharedMaterials = mr.sharedMaterials;
+            renderer.shadowCastingMode = mr.shadowCastingMode;
+            renderer.receiveShadows = mr.receiveShadows;
+            renderer.renderingLayerMask = mr.renderingLayerMask;
+            renderer.lightProbeUsage = mr.lightProbeUsage;
+            renderer.reflectionProbeUsage = mr.reflectionProbeUsage;
+            renderer.probeAnchor = lightingAnchor;
+            renderer.motionVectorGenerationMode = mr.motionVectorGenerationMode;
+            renderer.enabled = mr.enabled;
+            renderer.forceRenderingOff = originalForceRenderingOff;
+            renderChunks.Add(child);
+        }
+        if (renderChunks.Count > 0) mr.forceRenderingOff = true;
     }
 
     /// <summary>Kablo sayisina gore baglanti noktalari (dunya uzayinda).</summary>

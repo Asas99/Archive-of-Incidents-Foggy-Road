@@ -48,11 +48,14 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
     public float fullRateDistance = 15, reducedRateDistance = 25, fadeEndDistance = 30;
     [Range(1, 60)] public float distantUpdatesPerSecond = 30;
     [Range(0, 0.25f)] public float minimumScreenArea = 0.01f;
+    [Tooltip("When every window group is farther than the live-reflection range, polling is reduced. Approaching the station restores per-frame updates before glass can become visible.")]
+    [Range(0.02f, 0.25f)] public float distantIdlePollSeconds = 0.1f;
     [Range(0.001f, 0.1f)] public float clipOffset = 0.02f;
     public bool previewInSceneView = false;
     public bool reflectShadows = true;
     public int ActiveGroups { get; private set; }
     public Camera LastSourceCamera { get; private set; }
+    public int DistantIdleSkipCount { get; private set; }
 
     static readonly int TextureId = Shader.PropertyToID("_PlanarTexture");
     static readonly int MatrixId = Shader.PropertyToID("_PlanarVP");
@@ -69,10 +72,16 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
     UniversalAdditionalCameraData transmissionCamera;
     CameraOverrideOption previousColourOption;
     Camera[] cameraBuffer = Array.Empty<Camera>();
+    double nextDistantIdlePoll;
 
     // Camera.main may be null: this project uses an untagged first-person camera.
     public Camera ResolvePlayerCamera()
     {
+        // The assigned player camera is stable during gameplay. Avoid Camera.main
+        // and component lookups on every LateUpdate while it remains usable.
+        if (playerCamera && playerCamera.enabled && playerCamera.gameObject.activeInHierarchy &&
+            playerCamera.cameraType == CameraType.Game && !playerCamera.targetTexture && playerCamera.targetDisplay == 0)
+            return playerCamera;
         if (IsScreenCamera(playerCamera)) return playerCamera;
         var tagged=Camera.main;
         if (IsScreenCamera(tagged)) return tagged;
@@ -85,6 +94,7 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
             var candidate=cameraBuffer[i];
             if(IsScreenCamera(candidate) && (!best || candidate.depth>best.depth)) best=candidate;
         }
+        if (best) playerCamera = best;
         return best;
     }
     static bool IsScreenCamera(Camera camera)
@@ -97,6 +107,8 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
     void OnEnable()
     {
         block = new MaterialPropertyBlock(); warned = false;
+        nextDistantIdlePoll = 0;
+        DistantIdleSkipCount = 0;
         RefreshBakedBindings();
         #if UNITY_EDITOR
         UnityEditor.EditorApplication.update += EditorPreview;
@@ -123,7 +135,33 @@ public sealed partial class GasStationPlanarGlass : MonoBehaviour
             source = UnityEditor.SceneView.lastActiveSceneView ? UnityEditor.SceneView.lastActiveSceneView.camera : source;
         }
         #endif
+        if (Application.isPlaying && CanSkipDistantIdleTick(source)) { DistantIdleSkipCount++; return; }
         TickReflections(source,Application.isPlaying || previewInSceneView);
+    }
+
+    // Far from the station every group has a zero weight and no reflection camera
+    // can contribute to the frame. Polling at 10 Hz is enough to detect normal
+    // player movement into the 30 m live-reflection zone; inside that zone this
+    // method always returns false and the original per-frame path is unchanged.
+    bool CanSkipDistantIdleTick(Camera source)
+    {
+        if (!source || ActiveGroups != 0 || Time.realtimeSinceStartupAsDouble >= nextDistantIdlePoll)
+        {
+            if (!source || ActiveGroups != 0 || !AllGroupsBeyondLiveRange(source.transform.position)) return false;
+            nextDistantIdlePoll = Time.realtimeSinceStartupAsDouble + distantIdlePollSeconds;
+            return false;
+        }
+        return true;
+    }
+
+    bool AllGroupsBeyondLiveRange(Vector3 position)
+    {
+        float limitSqr = fadeEndDistance * fadeEndDistance;
+        foreach (var group in groups)
+            if (group != null && group.plane &&
+                (group.plane.TransformPoint(group.localPoint) - position).sqrMagnitude <= limitSqr)
+                return false;
+        return true;
     }
 
     /// <summary>Refresh reflections for a specific source camera (also used for in-scene verification).</summary>
