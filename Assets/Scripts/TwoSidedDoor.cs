@@ -21,6 +21,9 @@ public sealed class TwoSidedDoor : MonoBehaviour
     [Header("Interaction")]
     [SerializeField] private bool allowLeftClick = true;
 
+    [SerializeField] private TwoSidedDoor pairedDoor;
+    [SerializeField] private Collider interactionOccluder;
+
     [Header("Motion")]
     [SerializeField, InspectorName("Açılma Yönü")]
     private OpeningDirection openingDirection = OpeningDirection.Automatic;
@@ -92,6 +95,34 @@ public sealed class TwoSidedDoor : MonoBehaviour
         return nearest;
     }
 
+    // Some large, simplified body colliders extend slightly in front of a door.
+    // Ignore only the explicitly assigned collider; other objects still block interaction.
+    public static TwoSidedDoor FindBehindAssignedOccluder(Ray ray, float range, Collider blocker, Transform player)
+    {
+        if (blocker == null) return null;
+        TwoSidedDoor nearest = null;
+        float nearestDistance = range;
+        foreach (TwoSidedDoor door in activeDoors)
+        {
+            if (door == null || !door.isActiveAndEnabled || !door.hasInteractionBounds || door.interactionOccluder != blocker) continue;
+            Ray localRay = new Ray(door.transform.InverseTransformPoint(ray.origin), door.transform.InverseTransformVector(ray.direction));
+            if (!door.interactionBounds.IntersectRay(localRay, out float localDistance)) continue;
+            float distance = Vector3.Distance(ray.origin, door.transform.TransformPoint(localRay.GetPoint(localDistance)));
+            if (distance > nearestDistance) continue;
+            bool obstructed = false;
+            foreach (RaycastHit hit in Physics.RaycastAll(ray, distance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            {
+                if (hit.collider == blocker || hit.transform.IsChildOf(door.transform) || (player != null && hit.transform.IsChildOf(player))) continue;
+                obstructed = true;
+                break;
+            }
+            if (obstructed) continue;
+            nearest = door;
+            nearestDistance = distance;
+        }
+        return nearest;
+    }
+
     private void Update()
     {
         Quaternion targetRotation = isOpen
@@ -106,7 +137,15 @@ public sealed class TwoSidedDoor : MonoBehaviour
 
     public void Interact(Vector3 playerPosition, Vector3 viewDirection)
     {
-        if (isOpen)
+        bool open = !isOpen;
+        SetOpen(open, playerPosition, viewDirection);
+        if (pairedDoor != null && pairedDoor != this)
+            pairedDoor.SetOpen(open, playerPosition, viewDirection);
+    }
+
+    private void SetOpen(bool open, Vector3 playerPosition, Vector3 viewDirection)
+    {
+        if (!open)
         {
             isOpen = false;
             return;

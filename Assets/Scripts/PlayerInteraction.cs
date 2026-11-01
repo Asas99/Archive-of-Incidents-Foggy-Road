@@ -69,6 +69,10 @@ public sealed class PlayerInteraction : MonoBehaviour
             door = TwoSidedDoor.FindInteractionTarget(
                 new Ray(playerCamera.transform.position, playerCamera.transform.forward),
                 hasHit ? Mathf.Min(interactionRange, hit.distance) : interactionRange);
+        if (door == null && hasHit)
+            door = TwoSidedDoor.FindBehindAssignedOccluder(
+                new Ray(playerCamera.transform.position, playerCamera.transform.forward),
+                interactionRange, hit.collider, player != null ? player.transform : null);
         if (door != null)
         {
             SetStatus(door.isActiveAndEnabled ? "E - Kapıyı aç / kapat" : "");
@@ -84,9 +88,17 @@ public sealed class PlayerInteraction : MonoBehaviour
         }
 
         GeneratorManager generator = GeneratorManager.FindForTarget(hit.transform);
+        bool leverBehindOccluder = false;
+        if (generator == null || !generator.IsLever(hit.transform))
+        {
+            GeneratorManager behind = GeneratorManager.FindLeverBehindAssignedOccluder(
+                new Ray(playerCamera.transform.position, playerCamera.transform.forward),
+                interactionRange, hit.collider, player != null ? player.transform : null);
+            if (behind != null) { generator = behind; leverBehindOccluder = true; }
+        }
         if (generator != null)
         {
-            bool isLever = generator.isActiveAndEnabled && generator.IsLever(hit.transform);
+            bool isLever = generator.isActiveAndEnabled && (leverBehindOccluder || generator.IsLever(hit.transform));
             SetStatus(isLever ? "E - Jeneratörü aç / kapat" : "Jeneratörün kolunu hedefle.");
             if (isLever && (useKey || (leftClick && generator.AllowLeftClick))) generator.Interact();
             return;
