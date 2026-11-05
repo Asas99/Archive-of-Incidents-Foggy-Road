@@ -23,7 +23,7 @@ MonoBehaviour:
   farGrassStart: 0
   farGrassFull: 0
   farGrassFade: 56.333332
-  farGrassEnd: 65
+  farGrassEnd: 60
   farGrassDensity: 0.65
   farGrassDistanceThinning: 1
   farGrassGpuOcclusion: 1

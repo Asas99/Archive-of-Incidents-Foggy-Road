@@ -105,7 +105,7 @@ public sealed class ReflectionActor : MonoBehaviour
         foreach(var surface in surfaces)
         {
             if(!surface || !surface.enabled || surface.forceRenderingOff || surface.shadowCastingMode==UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly || !surface.gameObject.activeInHierarchy || (layers&(1<<surface.gameObject.layer))==0 ||
-               surface is ParticleSystemRenderer || surface is TrailRenderer || surface.GetComponent<GlassSurfaceVariation>()) continue;
+               surface is ParticleSystemRenderer || surface is TrailRenderer || surface.TryGetComponent<GlassSurfaceVariation>(out _)) continue;
             if(surface.GetComponentInParent<Camera>()) continue;
             if(surface.bounds.size.sqrMagnitude<0.00001f) continue;
             if(!found) bounds=surface.bounds; else bounds.Encapsulate(surface.bounds); found=true;

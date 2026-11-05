@@ -17,6 +17,8 @@ public sealed class RoadCpuBenchmark : MonoBehaviour
 
     Camera camera;
     GasStationPlanarGlass glass;
+    KarakterHareket movement;
+    bool movementWasEnabled, restored;
     Vector3 originalPosition;
     Quaternion originalRotation;
     int oldVsync, oldTarget, startSkips;
@@ -37,6 +39,8 @@ public sealed class RoadCpuBenchmark : MonoBehaviour
     {
         camera = source; glass = manager;
         originalPosition = camera.transform.position; originalRotation = camera.transform.rotation;
+        movement = camera.GetComponentInParent<KarakterHareket>();
+        if (movement) { movementWasEnabled = movement.enabled; movement.enabled = false; }
         camera.transform.SetPositionAndRotation(new Vector3(509.513f, 2.235f, 1248.762f), Quaternion.Euler(0f, 180f, 0f));
         oldVsync = QualitySettings.vSyncCount; oldTarget = Application.targetFrameRate; oldBackground = Application.runInBackground;
         QualitySettings.vSyncCount = 0; Application.targetFrameRate = -1; Application.runInBackground = true;
@@ -70,7 +74,10 @@ public sealed class RoadCpuBenchmark : MonoBehaviour
     }
     void Restore()
     {
+        if (restored) return;
+        restored = true;
         if (camera) camera.transform.SetPositionAndRotation(originalPosition, originalRotation);
+        if (movement) movement.enabled = movementWasEnabled;
         QualitySettings.vSyncCount = oldVsync; Application.targetFrameRate = oldTarget; Application.runInBackground = oldBackground;
         main.Dispose(); gpu.Dispose(); gc.Dispose();
     }

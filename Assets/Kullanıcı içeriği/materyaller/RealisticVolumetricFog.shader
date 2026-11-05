@@ -275,38 +275,46 @@ Shader "Custom/RealisticVolumetricFog"
                 // appearing as a hard volume cutoff.
                 float2 areaCenter = _FogAreaCenter.xz;
                 float2 areaHalfSize = max(_FogAreaSize.xy * 0.5, 1.0);
-                float2 areaFlow = _AreaWindDirection.xy;
-                areaFlow /= max(length(areaFlow), 0.001);
-                float areaTime = _Time.y * _AreaWindSpeed;
-                float2 areaDrift = areaFlow * areaTime;
-                float areaScale = max(_AreaWaveScale, 0.001);
-                float edgeNoiseX = ValueNoise3D(float3(
-                    worldPos.xz * areaScale * 0.42 + areaDrift * 0.55,
-                    worldPos.y * 0.025 + 11.7));
-                float edgeNoiseZ = ValueNoise3D(float3(
-                    worldPos.zx * areaScale * 0.36 - areaDrift * 0.38,
-                    worldPos.y * 0.031 + 27.4));
-                float2 edgeShift = (float2(edgeNoiseX, edgeNoiseZ) - 0.5) *
-                                   _FogAreaSoftness * _AreaEdgeBreakup;
                 float2 areaLocal = abs(worldPos.xz - areaCenter);
-                float2 edgeStart = max(areaHalfSize - _FogAreaSoftness + edgeShift,
-                                        float2(0.5, 0.5));
-                float2 edgeEnd = max(areaHalfSize + edgeShift, edgeStart + 0.5);
-                float2 areaMask2 = 1.0 - smoothstep(edgeStart, edgeEnd, areaLocal);
-                float areaMask = areaMask2.x * areaMask2.y;
-
-                float flowNoiseA = ValueNoise3D(float3(
-                    worldPos.xz * areaScale + areaDrift,
-                    worldPos.y * 0.040 + 4.2));
-                float flowNoiseB = ValueNoise3D(float3(
-                    worldPos.zx * areaScale * 1.85 - areaDrift * 0.72,
-                    worldPos.y * 0.065 + 19.8));
-                float flowField = saturate(flowNoiseA * 0.66 + flowNoiseB * 0.34);
-                float movingRibbons = smoothstep(0.26, 0.78, flowField);
-                float waveStrength = lerp(0.62, 1.42, movingRibbons);
-                waveStrength = lerp(1.0, waveStrength, _AreaWaveStrength);
-                float areaDensityMultiplier = lerp(1.0, waveStrength,
-                                                   areaMask * _AreaInfluence);
+                float areaDensityMultiplier = 1.0;
+                // Outside this conservative bound the area mask is exactly zero.
+                // Avoid four 3D noise evaluations for every ray sample there.
+                float2 areaBound = areaHalfSize +
+                                   abs(_FogAreaSoftness) *
+                                   (abs(_AreaEdgeBreakup) + 1.0) + 1.0;
+                if (all(areaLocal <= areaBound))
+                {
+                    float2 areaFlow = _AreaWindDirection.xy;
+                    areaFlow /= max(length(areaFlow), 0.001);
+                    float areaTime = _Time.y * _AreaWindSpeed;
+                    float2 areaDrift = areaFlow * areaTime;
+                    float areaScale = max(_AreaWaveScale, 0.001);
+                    float edgeNoiseX = ValueNoise3D(float3(
+                        worldPos.xz * areaScale * 0.42 + areaDrift * 0.55,
+                        worldPos.y * 0.025 + 11.7));
+                    float edgeNoiseZ = ValueNoise3D(float3(
+                        worldPos.zx * areaScale * 0.36 - areaDrift * 0.38,
+                        worldPos.y * 0.031 + 27.4));
+                    float2 edgeShift = (float2(edgeNoiseX, edgeNoiseZ) - 0.5) *
+                                       _FogAreaSoftness * _AreaEdgeBreakup;
+                    float2 edgeStart = max(areaHalfSize - _FogAreaSoftness + edgeShift,
+                                            float2(0.5, 0.5));
+                    float2 edgeEnd = max(areaHalfSize + edgeShift, edgeStart + 0.5);
+                    float2 areaMask2 = 1.0 - smoothstep(edgeStart, edgeEnd, areaLocal);
+                    float areaMask = areaMask2.x * areaMask2.y;
+                    float flowNoiseA = ValueNoise3D(float3(
+                        worldPos.xz * areaScale + areaDrift,
+                        worldPos.y * 0.040 + 4.2));
+                    float flowNoiseB = ValueNoise3D(float3(
+                        worldPos.zx * areaScale * 1.85 - areaDrift * 0.72,
+                        worldPos.y * 0.065 + 19.8));
+                    float flowField = saturate(flowNoiseA * 0.66 + flowNoiseB * 0.34);
+                    float movingRibbons = smoothstep(0.26, 0.78, flowField);
+                    float waveStrength = lerp(0.62, 1.42, movingRibbons);
+                    waveStrength = lerp(1.0, waveStrength, _AreaWaveStrength);
+                    areaDensityMultiplier = lerp(1.0, waveStrength,
+                                                 areaMask * _AreaInfluence);
+                }
                 return max((atmosphere + groundBanks + midWisps) *
                            areaDensityMultiplier * startFade, 0.0);
             }
