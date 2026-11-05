@@ -16,8 +16,11 @@ public sealed class PlayerInteraction : MonoBehaviour
     [SerializeField, HideInInspector] private Camera playerCamera;
     [SerializeField] private Canvas reticleCanvas;
     [SerializeField] private RawImage reticleDot;
-    private readonly RaycastHit[] hits = new RaycastHit[16];
+    // This buffer is intentionally large enough for the 4 m interaction ray so
+    // a dense collider cluster does not fall back to allocating RaycastAll().
+    private readonly RaycastHit[] hits = new RaycastHit[64];
     private Texture2D dotTexture;
+    private string noTargetStatus;
 
     public CarController DrivingVehicle { get; private set; }
     public bool IsDriving => DrivingVehicle != null && DrivingVehicle.HasDriver;
@@ -37,6 +40,7 @@ public sealed class PlayerInteraction : MonoBehaviour
         playerCamera = GetComponent<Camera>();
         if (player == null) player = GetComponentInParent<CharacterController>();
         if (pickup == null && player != null) pickup = player.GetComponent<PickupDrop>();
+        noTargetStatus = "Ortadaki noktayla bir nesneye bak (en fazla " + interactionRange.ToString("0.#") + " m).";
         CreateReticle();
     }
 
@@ -83,7 +87,7 @@ public sealed class PlayerInteraction : MonoBehaviour
 
         if (!hasHit)
         {
-            SetStatus("Ortadaki noktayla bir nesneye bak (en fazla " + interactionRange.ToString("0.#") + " m).");
+            SetStatus(noTargetStatus);
             return;
         }
 
@@ -128,17 +132,10 @@ public sealed class PlayerInteraction : MonoBehaviour
         Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
         int count = Physics.RaycastNonAlloc(ray, hits, interactionRange,
             Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-        RaycastHit[] candidates = hits;
-        if (count == hits.Length)
-        {
-            candidates = Physics.RaycastAll(ray, interactionRange,
-                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-            count = candidates.Length;
-        }
         float nearest = float.PositiveInfinity;
         for (int i = 0; i < count; i++)
         {
-            RaycastHit hit = candidates[i];
+            RaycastHit hit = hits[i];
             if (player != null && hit.transform.IsChildOf(player.transform)) continue;
             if (hit.distance >= nearest) continue;
             target = hit;

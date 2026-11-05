@@ -8,6 +8,7 @@ public class FoggyRoad_FpsCounter : MonoBehaviour
     float suanFps;
     float sonGuncelleme;
     GUIStyle stil;
+    string gosterilecekMetin = "0.0 FPS   (0.0 ms)";
 
     void Update()
     {
@@ -16,6 +17,8 @@ public class FoggyRoad_FpsCounter : MonoBehaviour
         if (birikim >= 0.5f)
         {
             suanFps = kare / birikim;
+            float ms = suanFps > 0.01f ? 1000f / suanFps : 0f;
+            gosterilecekMetin = suanFps.ToString("0.0") + " FPS   (" + ms.ToString("0.0") + " ms)";
             birikim = 0f;
             kare = 0;
             sonGuncelleme = Time.unscaledTime;
@@ -31,7 +34,6 @@ public class FoggyRoad_FpsCounter : MonoBehaviour
             stil.normal.textColor = Color.yellow;
             stil.fontStyle = FontStyle.Bold;
         }
-        float ms = suanFps > 0.01f ? 1000f / suanFps : 0f;
-        GUI.Label(new Rect(12, 8, 500, 40), suanFps.ToString("0.0") + " FPS   (" + ms.ToString("0.0") + " ms)", stil);
+        GUI.Label(new Rect(12, 8, 500, 40), gosterilecekMetin, stil);
     }
 }

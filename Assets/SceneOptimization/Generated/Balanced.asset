@@ -45,4 +45,4 @@ MonoBehaviour:
   fullTrees: 150
   treeDensity: 1
   nativeGrassDensity: 0.65
-  treeLodBias: 0.6
+  treeLodBias: 0.45
