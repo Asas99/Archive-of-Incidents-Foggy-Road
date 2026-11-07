@@ -44,6 +44,12 @@ public static class FoggyRoad_PowerLineWatcher
 
     static void OnHierarchyChanged()
     {
+        // Runtime chunks create hierarchy events themselves. Rebuilding here
+        // during Play Mode destroys/recreates those chunks and feeds the next
+        // event, even though Tick already skips Play Mode. OnEnable builds the
+        // runtime cables once; authoring updates belong to Edit Mode only.
+        if (EditorApplication.isPlayingOrWillChangePlaymode) return;
+
         // Direk silinmis / eklenmis / kopyalanmis olabilir.
         Refresh();
         if (cache == null) return;

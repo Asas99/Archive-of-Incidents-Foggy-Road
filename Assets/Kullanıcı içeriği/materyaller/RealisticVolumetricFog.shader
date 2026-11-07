@@ -2,6 +2,7 @@ Shader "Custom/RealisticVolumetricFog"
 {
     Properties
     {
+        [HideInInspector]_FogOnly("Fog transport output", Float) = 0
         [HDR]_FogColor("Fog Color", Color) = (0.56, 0.62, 0.64, 1)
         _Density("Atmosphere Density", Range(0.0, 1)) = 0.01
         _GroundDensity("Ground Bank Density", Range(0.0, 0.8)) = 0.03
@@ -65,6 +66,7 @@ Shader "Custom/RealisticVolumetricFog"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
+                float _FogOnly;
                 float4 _FogColor;
                 float _Density;
                 float _GroundDensity;
@@ -339,8 +341,10 @@ Shader "Custom/RealisticVolumetricFog"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
                 float2 uv = input.texcoord;
-                float4 sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture,
-                                                        sampler_LinearClamp, uv);
+                float4 sceneColor = float4(0, 0, 0, 1);
+                if (_FogOnly < 0.5)
+                    sceneColor = SAMPLE_TEXTURE2D_X(_BlitTexture,
+                                                  sampler_LinearClamp, uv);
                 float rawDepth = SampleSceneDepth(uv);
 
                 #if UNITY_REVERSED_Z
@@ -496,6 +500,8 @@ Shader "Custom/RealisticVolumetricFog"
                 }
 
                 float3 finalColor = sceneColor.rgb * transmittance + accumulatedFog;
+                if (_FogOnly > 0.5)
+                    return float4(accumulatedFog, transmittance);
                 return float4(finalColor, sceneColor.a);
             }
             ENDHLSL

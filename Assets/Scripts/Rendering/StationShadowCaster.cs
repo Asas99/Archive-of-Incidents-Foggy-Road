@@ -54,7 +54,7 @@ public sealed class StationShadowCaster : MonoBehaviour
         // Fall back to the original caster when its mesh is replaced or its geometry bounds change.
         if (sourceFilter == null || sourceFilter.sharedMesh != bakedSourceMesh ||
             bakedSourceMesh == null || bakedSourceMesh.vertexCount != bakedVertexCount ||
-            !bakedSourceMesh.bounds.Equals(bakedBounds) || shadowFilter.sharedMesh == null)
+            !BoundsMatch(bakedSourceMesh.bounds, bakedBounds) || shadowFilter.sharedMesh == null)
         {
             RestoreSource();
             return;
@@ -74,6 +74,17 @@ public sealed class StationShadowCaster : MonoBehaviour
             shadowRenderer.renderingLayerMask = sourceRenderer.renderingLayerMask;
         if (gameObject.layer != sourceRenderer.gameObject.layer)
             gameObject.layer = sourceRenderer.gameObject.layer;
+    }
+
+    private static bool BoundsMatch(Bounds current, Bounds baked)
+    {
+        // Scene serialization rounds tiny imported-mesh bounds. Exact equality
+        // rejected the unchanged station meshes after reload, disabling their
+        // cheaper shadow proxies. Allow rounding, but retain the geometry guard.
+        float tolerance = Mathf.Max(1e-7f, baked.size.magnitude * 1e-5f);
+        float toleranceSquared = tolerance * tolerance;
+        return (current.center - baked.center).sqrMagnitude <= toleranceSquared &&
+               (current.extents - baked.extents).sqrMagnitude <= toleranceSquared;
     }
 
     private void OnDisable() => RestoreSource();

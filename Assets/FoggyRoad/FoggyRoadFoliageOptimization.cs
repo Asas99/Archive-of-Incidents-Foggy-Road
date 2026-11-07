@@ -13,13 +13,24 @@ public sealed class FoggyRoadFoliageOptimization : MonoBehaviour
     [Min(0f)] public float fogCullHysteresis = 16f;
     [Min(0f)] public float shadowHysteresis = 10f;
     [Min(0.05f)] public float refreshInterval = 0.2f;
+    [Min(1f)] public float terrainTreeCullDistance = 300f;
+    public bool cullTerrainTrees = true;
     public bool limitDistantFoliageShadows;
     public bool limitDistantRockShadows;
     public bool cullFogHiddenFoliage;
     public bool cullSmallFoliageEarlier;
+    public bool enableGpuInstancing = true;
 
     private readonly List<Entry> entries = new List<Entry>();
+    private readonly List<TerrainState> terrainStates = new List<TerrainState>();
     private float nextRefreshTime;
+
+    private sealed class TerrainState
+    {
+        public Terrain terrain;
+        public float originalTreeDistance;
+        public float appliedTreeDistance;
+    }
 
     private sealed class Entry
     {
@@ -58,6 +69,28 @@ public sealed class FoggyRoadFoliageOptimization : MonoBehaviour
     {
         RestoreOriginalState();
         entries.Clear();
+        terrainStates.Clear();
+
+        if (cullTerrainTrees)
+        {
+            foreach (Terrain terrain in FindObjectsByType<Terrain>(FindObjectsSortMode.None))
+            {
+                if (terrain == null || !terrain.gameObject.activeInHierarchy) continue;
+
+                float original = terrain.treeDistance;
+                float applied = Mathf.Min(original, terrainTreeCullDistance);
+                terrainStates.Add(new TerrainState
+                {
+                    terrain = terrain,
+                    originalTreeDistance = original,
+                    appliedTreeDistance = applied
+                });
+
+                // Terrain ağaçları ayrı GameObject değildir; SetActive yerine
+                // Unity'nin yerleşik treeDistance culling'i kullanılır.
+                terrain.treeDistance = applied;
+            }
+        }
 
         foreach (Renderer renderer in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
         {
@@ -66,6 +99,13 @@ public sealed class FoggyRoadFoliageOptimization : MonoBehaviour
             bool rock = IsRock(renderer);
             bool fogCullCandidate = foliage || rock;
             if (!foliage && !fogCullCandidate) continue;
+
+            if (enableGpuInstancing)
+            {
+                foreach (Material material in renderer.sharedMaterials)
+                    if (material != null)
+                        material.enableInstancing = true;
+            }
 
             entries.Add(new Entry
             {
@@ -84,7 +124,11 @@ public sealed class FoggyRoadFoliageOptimization : MonoBehaviour
 
     private void Refresh()
     {
-        Vector3 cameraPosition = transform.position;
+        // Culling distance must follow the active gameplay camera. Using this
+        // component's transform would measure from a fixed scene object, so
+        // walking along the route would not change which foliage is culled.
+        Camera camera = Camera.main;
+        Vector3 cameraPosition = camera != null ? camera.transform.position : transform.position;
 
         foreach (Entry entry in entries)
         {
@@ -167,6 +211,12 @@ public sealed class FoggyRoadFoliageOptimization : MonoBehaviour
             if (entry.appliedForceRenderingOff != entry.originalForceRenderingOff)
                 entry.renderer.forceRenderingOff = entry.originalForceRenderingOff;
         }
+
+        foreach (TerrainState state in terrainStates)
+        {
+            if (state.terrain != null && state.terrain.treeDistance != state.originalTreeDistance)
+                state.terrain.treeDistance = state.originalTreeDistance;
+        }
     }
 
     private static bool IsFoliage(Renderer renderer)
@@ -194,7 +244,20 @@ public sealed class FoggyRoadFoliageOptimization : MonoBehaviour
     private static bool IsSmallFoliage(Renderer renderer)
     {
         string name = renderer.name.ToLowerInvariant();
-        return name.Contains("fern") || name.Contains("bush") || name.Contains("grass") ||
-               name.Contains("meadow");
+        if (name.Contains("fern") || name.Contains("bush") || name.Contains("shrub") ||
+            name.Contains("grass") || name.Contains("meadow") || name.Contains("foliage"))
+            return true;
+
+        foreach (Material material in renderer.sharedMaterials)
+        {
+            if (material == null) continue;
+            string materialName = material.name.ToLowerInvariant();
+            string shaderName = material.shader != null ? material.shader.name.ToLowerInvariant() : string.Empty;
+            if (materialName.Contains("bush") || materialName.Contains("shrub") ||
+                materialName.Contains("foliage") || shaderName.Contains("terraingrass"))
+                return true;
+        }
+
+        return false;
     }
 }
