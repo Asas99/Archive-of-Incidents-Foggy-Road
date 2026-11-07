@@ -97,7 +97,7 @@ Material:
     - _AreaWaveScale: 0.035
     - _AreaWaveStrength: 0.82
     - _AreaWindSpeed: 0.12
-    - _BaseHeight: 4.2
+    - _BaseHeight: 4.5
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BumpScale: 1
@@ -107,7 +107,7 @@ Material:
     - _Coverage: 0.46
     - _Cull: 2
     - _Cutoff: 0.5
-    - _Density: 0.016
+    - _Density: 0.007
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _DistantBreakup: 0.88
@@ -122,7 +122,7 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _GroundDensity: 0.042
+    - _GroundDensity: 0.082
     - _GroundThickness: 2.6
     - _HeightFalloff: 0.45
     - _MaxDistance: 300
@@ -140,8 +140,8 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
-    - _StartDistance: 80
-    - _Steps: 24
+    - _StartDistance: 0
+    - _Steps: 8
     - _SunScattering: 0.18
     - _Surface: 0
     - _VolumeContrast: 1.5

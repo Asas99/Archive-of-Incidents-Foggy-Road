@@ -1,3 +1,5 @@
+notify = ['C:\Users\hp\AppData\Local\OpenAI\Codex\runtimes\cua_node\959dc5a3d1e2c7b0\bin\node_modules\@oai\sky\bin\windows\codex-computer-use.exe', "turn-ended"]
+
 [mcp_servers.ai-game-developer]
 bearer_token_env_var = "GAME_DEV_AUTH_TOKEN"
 enabled = true

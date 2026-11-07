@@ -40,7 +40,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b00045f12942b46c698459096c89274e, type: 3}
   m_Name: FullScreenPassRendererFeature
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   injectionPoint: 600
   fetchColorBuffer: 1
   requirements: 1
@@ -48,6 +48,22 @@ MonoBehaviour:
   passIndex: 0
   bindDepthStencilAttachment: 0
   m_Version: 1
+--- !u!114 &-1027350622445883633
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a94a7351b34c90349bebb950e242da05, type: 3}
+  m_Name: Depth-aware reduced-resolution fog
+  m_EditorClassIdentifier:
+  m_Active: 1
+  fogMaterial: {fileID: 2100000, guid: efb8bc23f7d9922419d6f5070435c191, type: 2}
+  compositeShader: {fileID: 4800000, guid: 05a76cba8acb1704cb72a0db22efb6a9, type: 3}
+  resolutionScale: 0.5
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -75,6 +91,7 @@ MonoBehaviour:
   m_RendererFeatures:
   - {fileID: 7833122117494664109}
   - {fileID: -7611224588351574009}
+  - {fileID: -1027350622445883633}
   - {fileID: 654321987654321234}
   - {fileID: -8290417296177521391}
   - {fileID: -9110866544174101008}

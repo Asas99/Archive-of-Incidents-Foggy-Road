@@ -81,7 +81,11 @@ public static class OcclusionBakeOnly
     }
     static void Fail(Exception ex) { File.WriteAllText(Status, "FAIL: " + ex); Debug.LogException(ex); }
     [MenuItem("Tools/Foggy Road/Scene Optimization/Rebake Occlusion Only")]
-    public static void Bake()
+    public static void Bake() => Bake(false);
+
+    public static void BakeStationRegion() => Bake(true);
+
+    static void Bake(bool stationRegionOnly)
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode || StaticOcclusionCulling.isRunning) throw new InvalidOperationException("Stop Play/bake first.");
         var scene = EditorSceneManager.GetActiveScene();
@@ -123,6 +127,13 @@ public static class OcclusionBakeOnly
             }
             var terrain = go.GetComponent<Terrain>();
             if (terrain && !terrain.drawHeightmap) next &= ~(StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
+            // For the building bake, exclude kilometre-wide terrain/road bounds
+            // and distant scene objects from the visibility database. They keep
+            // their ordinary rendering; only local architecture needs this bake.
+            if (stationRegionOnly && (terrain || (renderer &&
+                (renderer.bounds.size.magnitude > 250f ||
+                 !new Bounds(new Vector3(480, 10, 1060), new Vector3(320, 64, 700)).Contains(renderer.bounds.center)))))
+                next &= ~(StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
             if (next != flags)
             {
                 Undo.RecordObject(go, "Prepare occlusion visibility flags"); GameObjectUtility.SetStaticEditorFlags(go, next);
@@ -131,7 +142,7 @@ public static class OcclusionBakeOnly
             }
         }
         if (walls == 0) throw new InvalidOperationException("No opaque static architecture found.");
-        EnsureCoverage(report);
+        EnsureCoverage(report, stationRegionOnly);
         StaticOcclusionCulling.smallestOccluder = 2f; StaticOcclusionCulling.smallestHole = .25f; StaticOcclusionCulling.backfaceThreshold = 100f;
         manager.occlusionReady = false; EditorUtility.SetDirty(manager);
         foreach (Camera camera in Objects<Camera>().Where(c => c.GetComponent<PlayerInteraction>() || c.GetComponent<DistantMountainBackdrop>()))
@@ -174,8 +185,26 @@ public static class OcclusionBakeOnly
         string n = r.name.ToLowerInvariant();
         return new[] { "duvar", "wall", "roof", "ceiling", "floor", "kolon", "pillar", "concrete", "zemin", "door frame", "doorframe" }.Any(n.Contains);
     }
-    static void EnsureCoverage(StringBuilder report)
+    static void EnsureCoverage(StringBuilder report, bool stationRegionOnly = false)
     {
+        if (stationRegionOnly)
+        {
+            var coverage = Objects<OcclusionArea>().FirstOrDefault(a => a.name == Root);
+            if (!coverage)
+            {
+                var go = new GameObject(Root); Undo.RegisterCreatedObjectUndo(go, "Station visibility coverage");
+                coverage = Undo.AddComponent<OcclusionArea>(go);
+            }
+            Undo.RecordObject(coverage, "Scope station visibility bake");
+            coverage.center = coverage.transform.InverseTransformPoint(new Vector3(480, 10, 1060));
+            coverage.size = new Vector3(320, 64, 700);
+            var settings = new SerializedObject(coverage);
+            settings.FindProperty("m_IsViewVolume").boolValue = true;
+            settings.ApplyModifiedProperties();
+            EditorUtility.SetDirty(coverage);
+            report.AppendLine("Scoped station/road view volume: " + coverage.center + " / " + coverage.size);
+            return;
+        }
         var terrains = Objects<Terrain>().Where(t => t.drawHeightmap && t.terrainData).ToArray();
         if (terrains.Length == 0) throw new InvalidOperationException("No playable Terrain for occlusion coverage.");
         Bounds bounds = terrains[0].terrainData.bounds; bounds.center += terrains[0].transform.position;
