@@ -28,6 +28,27 @@ MonoBehaviour:
   m_Name: Glass shared atlas
   m_EditorClassIdentifier: 
   m_Active: 1
+--- !u!114 &-7828214454936443832
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1614fc811f8f184697d9bee70ab9fe5, type: 3}
+  m_Name: DecalRendererFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  m_Settings:
+    technique: 0
+    maxDrawDistance: 1000
+    decalLayers: 0
+    dBufferSettings:
+      surfaceData: 2
+    screenSpaceSettings:
+      normalBlend: 0
 --- !u!114 &-7611224588351574009
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -59,7 +80,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a94a7351b34c90349bebb950e242da05, type: 3}
   m_Name: Depth-aware reduced-resolution fog
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   m_Active: 1
   fogMaterial: {fileID: 2100000, guid: efb8bc23f7d9922419d6f5070435c191, type: 2}
   compositeShader: {fileID: 4800000, guid: 05a76cba8acb1704cb72a0db22efb6a9, type: 3}
@@ -95,7 +116,8 @@ MonoBehaviour:
   - {fileID: 654321987654321234}
   - {fileID: -8290417296177521391}
   - {fileID: -9110866544174101008}
-  m_RendererFeatureMap: ad6b866f10d7b46c07f09519907f5f965204dd8a619e1409
+  - {fileID: -7828214454936443832}
+  m_RendererFeatureMap: ad6b866f10d7b46c07f09519907f5f965204dd8a619e14094864efcb6d985c93
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
