@@ -1,0 +1,7 @@
+<linker>
+  <!-- The decal registry binds URP's existing internal lifecycle delegate through reflection. -->
+  <assembly fullname="Unity.RenderPipelines.Universal.Runtime">
+    <type fullname="UnityEngine.Rendering.Universal.DecalProjector" preserve="all" />
+    <type fullname="UnityEngine.Rendering.Universal.DecalProjector/DecalProjectorAction" preserve="all" />
+  </assembly>
+</linker>

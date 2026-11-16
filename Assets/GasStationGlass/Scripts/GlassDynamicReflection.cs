@@ -19,6 +19,7 @@ public sealed partial class GasStationPlanarGlass
     public Camera CaptureCamera{get;private set;}
     sealed class DrawMaterials {public int revision;public Material[] materials;public int[] passes;}
     readonly Dictionary<Renderer,DrawMaterials> preparedMaterials=new Dictionary<Renderer,DrawMaterials>();
+    readonly ReflectionMaterialCache sourceMaterialCache=new ReflectionMaterialCache();
     readonly List<ReflectionActor> captureActors=new List<ReflectionActor>();
     readonly Dictionary<Renderer,Mesh> dynamicMeshes=new Dictionary<Renderer,Mesh>();
     readonly List<Renderer> dynamicModels=new List<Renderer>();
@@ -146,7 +147,7 @@ public sealed partial class GasStationPlanarGlass
         if(dynamicDebug==DynamicDebug.OcclusionDepth)return;
         foreach(var r in dynamicModels){var prepared=preparedMaterials[r];var materials=prepared.materials;for(int sub=0;sub<materials.Length;sub++){var m=materials[sub];if(m){if(dynamicMeshes.TryGetValue(r,out var proxy)&&proxy)command.DrawMesh(proxy,r.localToWorldMatrix,m,Mathf.Min(sub,proxy.subMeshCount-1),prepared.passes[sub]);else command.DrawRenderer(r,m,sub,prepared.passes[sub]);}}var mesh=dynamicMeshes.TryGetValue(r,out var low)?low:r is SkinnedMeshRenderer sk?sk.sharedMesh:r.GetComponent<MeshFilter>()?.sharedMesh;if(mesh)for(int sub=0;sub<mesh.subMeshCount;sub++)DynamicTriangles+=(long)mesh.GetIndexCount(sub)/3;}
     }
-    void ReleaseDynamicMaterials(){foreach(var m in opaqueMaterials.Values)if(m)DestroyResource(m);opaqueMaterials.Clear();preparedMaterials.Clear();histories.Clear();motionValid=false;}
+    void ReleaseDynamicMaterials(){foreach(var m in opaqueMaterials.Values)if(m)DestroyResource(m);opaqueMaterials.Clear();preparedMaterials.Clear();sourceMaterialCache.Clear();histories.Clear();motionValid=false;}
 }
 
 
