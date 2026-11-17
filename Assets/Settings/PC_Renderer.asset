@@ -116,7 +116,7 @@ MonoBehaviour:
   - {fileID: 654321987654321234}
   - {fileID: -8290417296177521391}
   - {fileID: -9110866544174101008}
-  - {fileID: -7828214454936443832}
+  - {fileID: 645142316733392658}
   m_RendererFeatureMap: ad6b866f10d7b46c07f09519907f5f965204dd8a619e14094864efcb6d985c93
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
@@ -143,6 +143,28 @@ MonoBehaviour:
   m_DepthTextureFormat: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 0
+--- !u!114 &645142316733392658
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71554f6acd7149a42809207f11ad860e, type: 3}
+  m_Name: Visibility-aware decals
+  m_EditorClassIdentifier:
+  m_Active: 1
+  m_Settings:
+    technique: 0
+    maxDrawDistance: 1000
+    decalLayers: 0
+    dBufferSettings:
+      surfaceData: 2
+    screenSpaceSettings:
+      normalBlend: 0
+  skipInvisibleDecals: 1
 --- !u!114 &654321987654321234
 MonoBehaviour:
   m_ObjectHideFlags: 0

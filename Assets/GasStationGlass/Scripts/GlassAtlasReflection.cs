@@ -88,7 +88,7 @@ public sealed partial class GasStationPlanarGlass
             var actor=renderer.GetComponentInParent<ReflectionActor>();if(actor&&actor.LowDrawParts.Count>0)continue;
             var mesh=dynamicMeshes.TryGetValue(renderer,out var low)?low:renderer is SkinnedMeshRenderer sk?sk.sharedMesh:renderer.GetComponent<MeshFilter>()?.sharedMesh;
             if(!mesh)continue;
-            batch.draws.Add(new AtlasDraw{mesh=mesh,skin=renderer is SkinnedMeshRenderer?renderer:null,matrix=renderer.localToWorldMatrix,materials=renderer.sharedMaterials,bounds=renderer.bounds,layer=renderer.gameObject.layer,visibility=actor&&actor.TryGetBounds(reflectionLayers.value,nearClock,out var actorBounds,out _,false)?CaptureVisibility(group,actor,actorBounds,source):1});
+            batch.draws.Add(new AtlasDraw{mesh=mesh,skin=renderer is SkinnedMeshRenderer?renderer:null,matrix=renderer.localToWorldMatrix,materials=sourceMaterialCache.Get(renderer),bounds=renderer.bounds,layer=renderer.gameObject.layer,visibility=actor&&actor.TryGetBounds(reflectionLayers.value,nearClock,out var actorBounds,out _,false)?CaptureVisibility(group,actor,actorBounds,source):1});
         }
         // Resolve material wrappers now, outside render graph execution.
         foreach(var draw in batch.draws)foreach(var material in draw.materials)AtlasMaterial(material);

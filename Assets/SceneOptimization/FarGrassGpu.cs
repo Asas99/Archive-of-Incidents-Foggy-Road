@@ -13,7 +13,8 @@ public sealed partial class FarGrassRenderer
   public FarGrassCache cache;public FarGrassCache.Patch[] source;public Material material;
   public ComputeBuffer instances,visible,args,ranges,counters;public Range[] candidates,all;public int count,candidateInstances;
   public Mesh mesh;public Material original;public float windPadding,windSignature;public int forwardPass;
-  public VegetationPatchHierarchy hierarchy;public int[] acceptedPatches;
+  public VegetationPatchHierarchy hierarchy;public int[] acceptedPatches,uploadedPatches;
+  public int uploadedRangeCount=-1,rangeUploads,rangeUploadSkips;
   public void Dispose(){instances?.Release();visible?.Release();args?.Release();ranges?.Release();counters?.Release();if(material){if(Application.isPlaying)UnityEngine.Object.Destroy(material);else UnityEngine.Object.DestroyImmediate(material);}}
  }
  readonly Dictionary<FarGrassCache,GpuCache> gpuCaches=new Dictionary<FarGrassCache,GpuCache>();
@@ -53,7 +54,7 @@ public sealed partial class FarGrassRenderer
    for(int i=0;i<patch.matrices.Length;i++) {var m=patch.matrices[i];var c=patch.centers[i];float extra=2*wind*Mathf.Max(m.GetColumn(0).magnitude,m.GetColumn(1).magnitude,m.GetColumn(2).magnitude);padding=Mathf.Max(padding,extra);data[offset++]=new Instance{matrix=m,inverseMatrix=m.inverse,bounds=new Vector4(c.x,c.y,c.z,patch.radii[i]+extra)};}
   }
   var result=new GpuCache{cache=cache,source=cache.patches,mesh=cache.mesh,original=cache.material,all=all,candidates=new Range[all.Length],windPadding=padding,windSignature=wind,
-   hierarchy=new VegetationPatchHierarchy(cache.patches),acceptedPatches=new int[all.Length]};
+   hierarchy=new VegetationPatchHierarchy(cache.patches),acceptedPatches=new int[all.Length],uploadedPatches=new int[all.Length]};
   try
   {
    result.instances=new ComputeBuffer(n,144);result.instances.SetData(data);
@@ -83,12 +84,25 @@ public sealed partial class FarGrassRenderer
    int accepted=gpu.hierarchy.Query(planes,eye,far2,gpu.windPadding,gpu.acceptedPatches,out var stats);
    gpuPatchTests+=stats.patchTests;gpuHierarchyTests+=stats.nodeTests;
    rangeRejected+=stats.rangeRejected;frustumRejected+=stats.frustumRejected;
+   bool rangesChanged=gpu.uploadedRangeCount!=accepted;
    for(int a=0;a<accepted;a++)
    {
     int p=gpu.acceptedPatches[a];var patch=cache.patches[p];
+    if(!rangesChanged&&gpu.uploadedPatches[a]!=p)rangesChanged=true;
     gpu.candidates[gpu.count++]=gpu.all[p];gpu.candidateInstances+=patch.matrices.Length;candidatePatches++;testedInstances+=patch.matrices.Length;
    }
-   if(gpu.count>0){gpu.ranges.SetData(gpu.candidates,0,0,gpu.count);gpuDraws.Add(gpu);}
+   if(gpu.count>0)
+   {
+    // Range contents depend only on the accepted patch sequence in this cache.
+    // Reuse the GPU buffer until that sequence changes, including between cameras.
+    if(rangesChanged)
+    {
+     gpu.ranges.SetData(gpu.candidates,0,0,gpu.count);
+     System.Array.Copy(gpu.acceptedPatches,gpu.uploadedPatches,accepted);gpu.uploadedRangeCount=accepted;gpu.rangeUploads++;
+    }
+    else gpu.rangeUploadSkips++;
+    gpuDraws.Add(gpu);
+   }
   }
   drawCalls=gpuDraws.Count;
  }

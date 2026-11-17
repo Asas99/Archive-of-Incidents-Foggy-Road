@@ -212,45 +212,55 @@ Shader "Custom/RealisticVolumetricFog"
                 // map. Their scale is independent from the camera and ray length,
                 // so travelling through the level reveals distinct banks and
                 // genuinely clear areas instead of carrying one screen-space veil.
-                float3 zonePosition = worldPos *
-                                      float3(_FogZoneScale,
-                                             _FogZoneScale * 0.52,
-                                             _FogZoneScale);
-                float zoneField = FogFBM3D(zonePosition +
-                                            float3(17.3, -6.1, 31.7));
-                zoneField = zoneField * 0.76 +
-                            ValueNoise3D(zonePosition * 0.41 +
-                                         float3(-9.8, 21.4, 4.6)) * 0.24;
-                float zoneThreshold = lerp(0.34, 0.61, _FogZoneBreakup);
-                float fogZone = smoothstep(zoneThreshold - 0.10,
-                                           zoneThreshold + 0.13,
-                                           zoneField);
-                float zonePockets = FogFBM3D(zonePosition * 2.65 +
-                                              float3(-37.2, 8.4, 13.9));
-                zonePockets = smoothstep(0.43, 0.67, zonePockets);
-                fogZone *= lerp(0.10, 1.0, zonePockets);
                 float zoneFade = smoothstep(_StartDistance + 10.0,
                                             _StartDistance + 38.0,
                                             distanceFromCamera);
-                float zoneMask = lerp(1.0,
-                                      lerp(0.025, 1.0, fogZone),
-                                      zoneFade * _FogZoneBreakup);
+                float zoneMask = 1.0;
+                // This noise cannot contribute when its exact blend weight is zero.
+                [branch] if (zoneFade * _FogZoneBreakup != 0.0)
+                {
+                    float3 zonePosition = worldPos *
+                                          float3(_FogZoneScale,
+                                                 _FogZoneScale * 0.52,
+                                                 _FogZoneScale);
+                    float zoneField = FogFBM3D(zonePosition +
+                                                float3(17.3, -6.1, 31.7));
+                    zoneField = zoneField * 0.76 +
+                                ValueNoise3D(zonePosition * 0.41 +
+                                             float3(-9.8, 21.4, 4.6)) * 0.24;
+                    float zoneThreshold = lerp(0.34, 0.61, _FogZoneBreakup);
+                    float fogZone = smoothstep(zoneThreshold - 0.10,
+                                               zoneThreshold + 0.13,
+                                               zoneField);
+                    float zonePockets = FogFBM3D(zonePosition * 2.65 +
+                                                  float3(-37.2, 8.4, 13.9));
+                    zonePockets = smoothstep(0.43, 0.67, zonePockets);
+                    fogZone *= lerp(0.10, 1.0, zonePockets);
+                    zoneMask = lerp(1.0,
+                                          lerp(0.025, 1.0, fogZone),
+                                          zoneFade * _FogZoneBreakup);
+                }
 
                 // Keep the far road from becoming a single grey curtain. A very
                 // broad 3D region mask opens darker gaps only as distance builds.
                 float distantFade = smoothstep(_MaxDistance * 0.34,
                                                _MaxDistance * 0.92,
                                                distanceFromCamera);
-                float distantField = FogFBM3D(weatherPosition * 0.43 +
-                                              float3(41.7, -18.2, 9.4));
-                distantField = distantField * 0.68 + structure.z * 0.32;
-                float distantThreshold = lerp(0.31, 0.66, _DistantBreakup);
-                float distantRegions = smoothstep(distantThreshold - 0.10,
-                                                  distantThreshold + 0.16,
-                                                  distantField);
-                float distantBreakup = lerp(1.0,
-                                            lerp(0.06, 1.18, distantRegions),
-                                            distantFade * _DistantBreakup);
+                float distantBreakup = 1.0;
+                // This noise cannot contribute when its exact blend weight is zero.
+                [branch] if (distantFade * _DistantBreakup != 0.0)
+                {
+                    float distantField = FogFBM3D(weatherPosition * 0.43 +
+                                                  float3(41.7, -18.2, 9.4));
+                    distantField = distantField * 0.68 + structure.z * 0.32;
+                    float distantThreshold = lerp(0.31, 0.66, _DistantBreakup);
+                    float distantRegions = smoothstep(distantThreshold - 0.10,
+                                                      distantThreshold + 0.16,
+                                                      distantField);
+                    distantBreakup = lerp(1.0,
+                                                lerp(0.06, 1.18, distantRegions),
+                                                distantFade * _DistantBreakup);
+                }
 
                 // Keep only a faint continuous layer; most fog now forms pockets.
                 float atmosphereMask = lerp(0.0, 1.50, structure.z);
