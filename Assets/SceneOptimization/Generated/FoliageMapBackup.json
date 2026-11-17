@@ -1,0 +1,580 @@
+{
+    "entries": [
+        {
+            "materialGuid": "1560d3c960915e640ad6b470d9677a49",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "d3cf4500414007c4c895584cfcf1fbc3",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "1560d3c960915e640ad6b470d9677a49",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "77efac6da14b90f48895b89d90b5ef3f",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "9802f167ca9940941b7c479bdc383074",
+            "property": "_ExtraTex",
+            "textureGuid": "f1ce8fcb76987c84393c175b8ada22df",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "9802f167ca9940941b7c479bdc383074",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "3c174c78003db554b95d3f713d378b49",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "72536a5ca12949442bda3dc68534cfff",
+            "property": "_ExtraTex",
+            "textureGuid": "f1ce8fcb76987c84393c175b8ada22df",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "72536a5ca12949442bda3dc68534cfff",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "3c174c78003db554b95d3f713d378b49",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "e3c7a1451bb49964ea00f36800a4c5c5",
+            "property": "_ExtraTex",
+            "textureGuid": "f1ce8fcb76987c84393c175b8ada22df",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "e3c7a1451bb49964ea00f36800a4c5c5",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "3c174c78003db554b95d3f713d378b49",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "bdf59867a1c79694393da976c6dfcdde",
+            "property": "_ExtraTex",
+            "textureGuid": "f1ce8fcb76987c84393c175b8ada22df",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "bdf59867a1c79694393da976c6dfcdde",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "3c174c78003db554b95d3f713d378b49",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "472dbd8375729c644bf6c5379172eb4a",
+            "property": "_ExtraTex",
+            "textureGuid": "f1ce8fcb76987c84393c175b8ada22df",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "472dbd8375729c644bf6c5379172eb4a",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "3c174c78003db554b95d3f713d378b49",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "c2f5fba1b5521234cb5093691b34221b",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "2ab7032a9caf5324489bb1d8ff18725d",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "c2f5fba1b5521234cb5093691b34221b",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "eeb147f9ea9e0d744837f4a4936890f1",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "d1dc6aad5af19ac49b271bfed4b50d0e",
+            "property": "_ExtraTex",
+            "textureGuid": "3679c3f7234286e4fbcb6fea7385c59b",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "19c1cb7274f439a4d8e0ee2b8513a148",
+            "property": "_ExtraTex",
+            "textureGuid": "3679c3f7234286e4fbcb6fea7385c59b",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "7a9e8feda6db5e34ba7c06e34a88b6fe",
+            "property": "_ExtraTex",
+            "textureGuid": "3679c3f7234286e4fbcb6fea7385c59b",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "ddedcf96eacbddf4c902c93682d71621",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "2acdbd081c9f4e7448a4885ecf259aaf",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "ddedcf96eacbddf4c902c93682d71621",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "0942f310de78e664aaaca6d7d276cb61",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "29a7255d829e2d14697e2a66f62c97e5",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "d5a7b708862dd0a449b4bccbefdd2335",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "29a7255d829e2d14697e2a66f62c97e5",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "daa49585c030643489dad5c6e4680dca",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "5ae1d3b28da5ee54c8e188b4f43748c6",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "d5a7b708862dd0a449b4bccbefdd2335",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "5ae1d3b28da5ee54c8e188b4f43748c6",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "daa49585c030643489dad5c6e4680dca",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "cfa16e4c123f09d428ea44757273bc71",
+            "property": "_ExtraTex",
+            "textureGuid": "7cca740390e2ece44ba627f2be09d0f7",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "cfa16e4c123f09d428ea44757273bc71",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "549a1bfc57274a24893996d06cfe2fa4",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "afdfda7d525314440ab76bc3dd57aed6",
+            "property": "_ExtraTex",
+            "textureGuid": "7cca740390e2ece44ba627f2be09d0f7",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "afdfda7d525314440ab76bc3dd57aed6",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "549a1bfc57274a24893996d06cfe2fa4",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "23e892a9a5b3bb24e85003f42b867334",
+            "property": "_ExtraTex",
+            "textureGuid": "7cca740390e2ece44ba627f2be09d0f7",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "23e892a9a5b3bb24e85003f42b867334",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "549a1bfc57274a24893996d06cfe2fa4",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "f8e44c1e7d73f5e4bbdf57602c42d8cf",
+            "property": "_ExtraTex",
+            "textureGuid": "7cca740390e2ece44ba627f2be09d0f7",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "f8e44c1e7d73f5e4bbdf57602c42d8cf",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "549a1bfc57274a24893996d06cfe2fa4",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "74192d3abc448fc4bb3db47632afa863",
+            "property": "_ExtraTex",
+            "textureGuid": "7cca740390e2ece44ba627f2be09d0f7",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "74192d3abc448fc4bb3db47632afa863",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "549a1bfc57274a24893996d06cfe2fa4",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "c74430b1d74d488448ed1c2d21eb9dd3",
+            "property": "_ExtraTex",
+            "textureGuid": "292e806c6a48d044ead7ab36220be989",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "c74430b1d74d488448ed1c2d21eb9dd3",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "b62ae04c53c97654a84908e91da2cb08",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "fa66cc5fddd384f4c9d4e0f2cfbb297d",
+            "property": "_ExtraTex",
+            "textureGuid": "292e806c6a48d044ead7ab36220be989",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "fa66cc5fddd384f4c9d4e0f2cfbb297d",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "b62ae04c53c97654a84908e91da2cb08",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "f32865f60d0d5404e9a0752f03e6a4bd",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "0e1771a5cd057014db71494d5a458d40",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "1ad230c1a51fe7246971e6fc9cde54e7",
+            "property": "_ExtraTex",
+            "textureGuid": "965b93b0a2271a647b2c379c3e808331",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "9fa1ac052619df84fbb2c8a53a856d87",
+            "property": "_ExtraTex",
+            "textureGuid": "965b93b0a2271a647b2c379c3e808331",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "89dc4fa407b6ca348b7083983118d321",
+            "property": "_ExtraTex",
+            "textureGuid": "965b93b0a2271a647b2c379c3e808331",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "f1421dbc9673ed047936c222295dbdc7",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "20e5036a7508c01479cdb7338b1c86cc",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "f1421dbc9673ed047936c222295dbdc7",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "5ac60e8e8739b1f4daeb70e1c662df49",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "ed3cddf61c9a28e4e862ab8950b898c5",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "20e5036a7508c01479cdb7338b1c86cc",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "ed3cddf61c9a28e4e862ab8950b898c5",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "5ac60e8e8739b1f4daeb70e1c662df49",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "1a0726ac71de2bd43ae8d33caa00b33f",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "e9a1c1b060b9b2c4989233f1037f9d5d",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "1a0726ac71de2bd43ae8d33caa00b33f",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "5bdbe53dce2414e458937234dce49479",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "fc2cb293a8a78bd4088fe8970baccd08",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "e9a1c1b060b9b2c4989233f1037f9d5d",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "fc2cb293a8a78bd4088fe8970baccd08",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "5bdbe53dce2414e458937234dce49479",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "8559612ac6d04c14f985f0330158f389",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "e9a1c1b060b9b2c4989233f1037f9d5d",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "8559612ac6d04c14f985f0330158f389",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "5bdbe53dce2414e458937234dce49479",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "a48ad8aadb27f004390383c89862e6f3",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "0e1771a5cd057014db71494d5a458d40",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "238ad6ea99d845f498c3a2334f75358a",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "ba5d550271efae04b84eeb0e550be656",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "238ad6ea99d845f498c3a2334f75358a",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "100a50e8b1d0bc04b95bc2f03cb760db",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "1d2ed9cc10dda1245b29dcdf4fa052bf",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "cfc599ff14b5f5d45bcdacfde81269a4",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "1d2ed9cc10dda1245b29dcdf4fa052bf",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "d2418be9721fd3e40b01f6a5f3c43325",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "8e65580a6b5070f499f845032764a4d3",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "99c8d7f7d5b72054688fa02133cee2db",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "8e65580a6b5070f499f845032764a4d3",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "fe776dd9b1cb96246a83059626ea99f8",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "405b9ff318b139d478492b258cc6f606",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "d5a7b708862dd0a449b4bccbefdd2335",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "405b9ff318b139d478492b258cc6f606",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "daa49585c030643489dad5c6e4680dca",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "fc123ab8f2eb56945b5849155624e2c0",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "e9a1c1b060b9b2c4989233f1037f9d5d",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "fc123ab8f2eb56945b5849155624e2c0",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "5bdbe53dce2414e458937234dce49479",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "d3f698d8d13edc2478d19e143b436434",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "20e5036a7508c01479cdb7338b1c86cc",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "d3f698d8d13edc2478d19e143b436434",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "5ac60e8e8739b1f4daeb70e1c662df49",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "0cf15945abe04ad4589592fd3bfcd17b",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "d3cf4500414007c4c895584cfcf1fbc3",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "0cf15945abe04ad4589592fd3bfcd17b",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "77efac6da14b90f48895b89d90b5ef3f",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "9ef29f7651a5050409fa9822d6d4f941",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "2acdbd081c9f4e7448a4885ecf259aaf",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "9ef29f7651a5050409fa9822d6d4f941",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "0942f310de78e664aaaca6d7d276cb61",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "3fed16abbb8ff3145983ba65eca1cca2",
+            "property": "Texture2D_A5E0646",
+            "textureGuid": "2ab7032a9caf5324489bb1d8ff18725d",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "3fed16abbb8ff3145983ba65eca1cca2",
+            "property": "Texture2D_8713F080",
+            "textureGuid": "eeb147f9ea9e0d744837f4a4936890f1",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "ec4c06a182765544895a679bdb5c4bcb",
+            "property": "_ExtraTex",
+            "textureGuid": "902e5a797d8e0264e9c9ac00621c406f",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "6ed8d863fa4e4ee4db27ac197ce98d99",
+            "property": "_ExtraTex",
+            "textureGuid": "edcd0e8c7fd488c4389ffd92c72e9c8a",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "6ed8d863fa4e4ee4db27ac197ce98d99",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "b3110108144cfd04bb60590ac93e60d0",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "792a237589906584cab08fca5ee836de",
+            "property": "_ExtraTex",
+            "textureGuid": "30acfc55e14e8c14d9803ad97fbe8174",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "f995df3418732fb4ea23b356c02e25fd",
+            "property": "_ExtraTex",
+            "textureGuid": "199f5d792c70f744ba9d046685be46fa",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "13209affabf96cd4ca2d4ca465caac92",
+            "property": "_ExtraTex",
+            "textureGuid": "aebf54decced33f468f69953ea94e151",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "13209affabf96cd4ca2d4ca465caac92",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "9129b4cd529fd7b45832fb67467c70ae",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "6e96b44ff17a7de4a859752d4aa68e3d",
+            "property": "_ExtraTex",
+            "textureGuid": "dbda5ab6f9a23bd46b831987f6a14c89",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "2c519d34c0d1e4f47b742fc12d67f09c",
+            "property": "_ExtraTex",
+            "textureGuid": "f1ce8fcb76987c84393c175b8ada22df",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "2c519d34c0d1e4f47b742fc12d67f09c",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "3c174c78003db554b95d3f713d378b49",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "5ef1f84b236fe2a4c9082cb4ab535a7a",
+            "property": "_ExtraTex",
+            "textureGuid": "3679c3f7234286e4fbcb6fea7385c59b",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "1323bd2ef1050e740801e50c8ee66583",
+            "property": "_ExtraTex",
+            "textureGuid": "7cca740390e2ece44ba627f2be09d0f7",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "1323bd2ef1050e740801e50c8ee66583",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "549a1bfc57274a24893996d06cfe2fa4",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "b54c1313b2e11d445ac91a934cb2a25c",
+            "property": "_ExtraTex",
+            "textureGuid": "965b93b0a2271a647b2c379c3e808331",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "4777e8363f131b54c9bc570b8c7ad9a2",
+            "property": "_ExtraTex",
+            "textureGuid": "292e806c6a48d044ead7ab36220be989",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "4777e8363f131b54c9bc570b8c7ad9a2",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "b62ae04c53c97654a84908e91da2cb08",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "c589a3eaae9e93d4a9f61a62726c6972",
+            "property": "_ExtraTex",
+            "textureGuid": "f130a62d4fe680c4b937d5635f1b3bb7",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "c589a3eaae9e93d4a9f61a62726c6972",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "e2c1b20ace5ce834ca19fc62a9b65780",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "ecedb539e743fd64d95bac1d9bb84daa",
+            "property": "_ExtraTex",
+            "textureGuid": "876b256b95c4a624e9226a9830730449",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "a9ff991df2f00244ca260a6b71765562",
+            "property": "_ExtraTex",
+            "textureGuid": "ae83a700454dbcb40989d58ab622554e",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "a9ff991df2f00244ca260a6b71765562",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "4e3e9f2a55d6511488fa952048fb9707",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "ede0004c9eab0fe47bdadae32797b5dd",
+            "property": "_ExtraTex",
+            "textureGuid": "039e517c666f4734884c339133348f5d",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "ede0004c9eab0fe47bdadae32797b5dd",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "dc365f063cec9364fa1e63a07bdcd2e5",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "c2717908c5ce43b4ea29f64dbc360a9f",
+            "property": "_ExtraTex",
+            "textureGuid": "38d89d146b766dc44961bf535af7de58",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "ded1bcb5ed190a34c820f73ce6f2eb58",
+            "property": "_ExtraTex",
+            "textureGuid": "a3de5649b073d9f4eabd0101828bbdf9",
+            "textureId": 2800000
+        },
+        {
+            "materialGuid": "ded1bcb5ed190a34c820f73ce6f2eb58",
+            "property": "_SubsurfaceTex",
+            "textureGuid": "211b6556c1542874ca2ded0107c44750",
+            "textureId": 2800000
+        }
+    ]
+}

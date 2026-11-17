@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: 1323bd2ef1050e740801e50c8ee66583_Tree
-  m_Shader: {fileID: 4800000, guid: 02830e34ffcc98343ba1a32c62fb5a43, type: 3}
+  m_Shader: {fileID: 4800000, guid: 56413b2f87ef7c24a96a2da11faae43c, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
